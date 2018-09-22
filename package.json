@@ -1,0 +1,24 @@
+{
+  "name": "mccommandeditor",
+  "version": "1.0.0",
+  "description": "A blockly application to create Minecraft DataPacks",
+  "main": "run.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "npm install",
+    "start": "cd ./server && npm run start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/T-Reimer/MCDataPackGenerator.git"
+  },
+  "author": "Trevor",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/T-Reimer/MCDataPackGenerator/issues"
+  },
+  "homepage": "https://github.com/T-Reimer/MCDataPackGenerator#readme",
+  "dependencies": {
+    "node-run-cmd": "^1.0.1"
+  }
+}
