@@ -1,7 +1,8 @@
 const nrc = require("node-run-cmd");
 
 const commands = [
-    { command: 'git clone ', cwd: './repos' }
+    "npm install",
+    { command: 'git clone https://github.com/google/blockly.git', cwd: './repos' }
 ];
 
 nrc.run(commands);
