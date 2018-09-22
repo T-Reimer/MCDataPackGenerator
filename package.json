@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/T-Reimer/MCDataPackGenerator#readme",
   "dependencies": {
+    "express": "^4.16.3",
     "node-run-cmd": "^1.0.1"
   }
 }
