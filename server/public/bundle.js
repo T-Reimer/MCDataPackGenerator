@@ -882,9 +882,8 @@ class ProjectFile{
 
         // load the file
         project.load(name).then(function(data){
-            // console.log(data);
             that.setFile(data);
-            // that.file = data;
+
         }).catch(function(){
             // then this is a new file
             console.log("New File");
