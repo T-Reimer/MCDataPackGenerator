@@ -11,11 +11,16 @@
     position: fixed;
     top: 56px;
     left: 0;
+    padding-left: 4px;
     height: 100vh;
     background: #f8f9fa;
-    color: #fff;
+    color: rgba(20, 20, 20, 0.85);
     transition: all 0.3s;
     transition: width 0.01s;
+}
+
+.sidebar-header{
+    text-align: center;
 }
 
 #split-bar {
@@ -25,3 +30,42 @@
     width: 3px;
     cursor: col-resize;
 }
+
+.add-new-icon{
+    float: right;
+}
+
+.folder{
+    margin-left: 12px;
+}
+.folder a {
+    cursor: pointer;
+}
+
+.folder .file{
+    background-color: transparent;
+    padding: 6px;
+    border-radius: .25rem;
+}
+
+.folder .file:hover{
+    background-color: rgba(75, 75, 75, 0.85);
+}
+
+.folder input[type="radio"]{
+    display: none;
+}
+
+.folder input:checked + .file {
+    background-color: rgba(75, 75, 75, 0.5);
+}
+
+.main-files-list{
+    overflow: auto;
+    height: calc(100% - 65px);
+}
+
+.material-icons.md-18 { font-size: 18px; }
+.material-icons.md-24 { font-size: 24px; }
+.material-icons.md-36 { font-size: 36px; }
+.material-icons.md-48 { font-size: 48px; }

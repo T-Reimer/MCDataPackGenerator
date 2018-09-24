@@ -1,0 +1,40 @@
+{
+    "name": "demo",
+    "namespace": "demo-data-pack",
+    "data": {
+        "advancements": {
+            "files":[]
+        },
+        "functions": {
+            "files":[
+                {
+                    "type": "file",
+                    "name": "File 1",
+                    "contents": ""
+                }, {
+                    "type": "dir",
+                    "name": "Folder 1",
+                    "contents": [
+                        {
+                            "type": "file",
+                            "name": "File 2",
+                            "contents": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        "loot_tables": {
+            "files":[]
+        },
+        "structures": {
+            "files":[]
+        },
+        "recipes": {
+            "files":[]
+        },
+        "tags": {
+            "files":[]
+        }
+    }
+}

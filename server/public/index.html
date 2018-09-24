@@ -16,6 +16,7 @@
         crossorigin="anonymous"></script>
     <script src="./bundle.js"></script>
     <link rel="stylesheet" href="./style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <body>
@@ -23,7 +24,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <h3>MC Datapack Generator</h3>
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#projectsModal">
-                New Project
+                New Data Pack
             </button>
         </nav>
         <div class="wrapper">
@@ -44,46 +45,10 @@
                     </div>
                 </div>
 
-                <ul class="list-unstyled components">
-                    <p>Files</p>
-                    <li class="active">
-                        <a href="#homeSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">Home</a>
-                        <ul class="collapse list-unstyled" id="homeSubmenu">
-                            <li>
-                                <a href="#">Home 1</a>
-                            </li>
-                            <li>
-                                <a href="#">Home 2</a>
-                            </li>
-                            <li>
-                                <a href="#">Home 3</a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="#">About</a>
-                    </li>
-                    <li>
-                        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">Pages</a>
-                        <ul class="collapse list-unstyled" id="pageSubmenu">
-                            <li>
-                                <a href="#">Page 1</a>
-                            </li>
-                            <li>
-                                <a href="#">Page 2</a>
-                            </li>
-                            <li>
-                                <a href="#">Page 3</a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="#">Portfolio</a>
-                    </li>
-                    <li>
-                        <a href="#">Contact</a>
-                    </li>
-                </ul>
+                <h5>Files</h5>
+                <ol class="folder list-unstyled components main-files-list" id="files-list-menu">
+                    <!-- This is where the file list elements go -->
+                </ol>
 
             </nav>
             <!-- Page Content -->
@@ -105,12 +70,34 @@
                         </button>
                     </div>
                     <div class="modal-body">
+                        <div id="new-project-form-warning-div" class="alert alert-warning alert-dismissible fade show"
+                            role="alert" style="display:none;">
+                            <strong>Alert!</strong>
+                            <label id="new-project-form-warning"></label>
+                            <button type="button" class="close" aria-label="Close" onclick="$('#new-project-form-warning-div').hide();">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
                         <div class="form-group">
                             <label for="NewProjectName">Name</label>
                             <input type="text" name="name" class="form-control" id="NewProjectName" aria-describedby="newProjectNameHelp"
                                 placeholder="Data Pack Name">
                             <small id="newProjectNameHelp" class="form-text text-muted">
                                 Choose a name for your Data Pack
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="NewProjectNameSpace">Namespace</label>
+                            <input type="text" name="namespace" class="form-control" id="NewProjectNameSpace"
+                                aria-describedby="newProjectNameHelp" placeholder="Data Pack Namespace">
+                            <small id="newProjectNameHelp" class="form-text text-muted">
+                                A namespace is used to identify the data and like all file and
+                                folder names inside the data folder it should only contain
+                                lowercase alphanumerical characters,
+                                <code>-</code>, <code>_</code>, and <code>.</code>.
+                                It is advised to use a unique namespace to prevent clashes
+                                between multiple datapacks. The <code>minecraft</code> namespace should only be
+                                used when overwriting default data.
                             </small>
                         </div>
                     </div>
