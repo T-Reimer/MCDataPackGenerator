@@ -3,9 +3,10 @@
 $( document ).ready(function(){
     require("load");
 });
-},{"load":5}],2:[function(require,module,exports){
+},{"load":6}],2:[function(require,module,exports){
 let idNum = 0;
 const html = require("html");
+const JSEvents = require("jsevents");
 
 class FileTree{
     
@@ -34,14 +35,12 @@ class FileTree{
     }
 
     setup(){
+        this.events = new JSEvents(this);
         const that = this;
         this.name = "";
-
         this.selected = null;
 
-        this.events = {};
         this.html = document.createElement("ul");
-
         if(!this.options){
             this.options = {};
         }
@@ -229,32 +228,14 @@ class FileTree{
     }
 
     /**
-     * 
-     * @param {String} event the event name
-     * @param {Function} callback the callback to run
-     */
-    on(event, callback){
-        if(!this.events[event]){
-            this.events[event] = [];
-        }
-        if(callback && typeof callback === "function"){
-            this.events[event].push(callback);
-        }
-    }
-
-    /**
      * trigger a event callback
      * 
      * @param {String} event the event name
      * @param {Object} args the args to pass into function
      */
     triggerEvent(event, args){
-        if(this.events[event]){
-            let events = this.events[event];
-            for(let i = 0; i < events.length; i++){
-                events[i].apply(this, args);
-            }
-        }
+        console.log(this.events);
+        this.events.triggerCallback(event, this, args);
     }
 
     /**
@@ -645,7 +626,7 @@ class FileTree{
 }
 
 module.exports = FileTree;
-},{"html":3}],3:[function(require,module,exports){
+},{"html":3,"jsevents":4}],3:[function(require,module,exports){
 let ids = [];
 const str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -685,6 +666,77 @@ function newId(len){
 
 module.exports.newId = newId;
 },{}],4:[function(require,module,exports){
+
+
+class JSEvents{
+
+    constructor(caller){
+        this.events = {};
+        const that = this;
+        if (caller) {
+            caller.on = function (event, callback) {
+                console.log("Register", event);
+                that.on(event, callback);
+            };
+            caller.remove = function (event, callback) {
+                that.remove(event, callback);
+            };
+        }
+    }
+
+    /**
+     * create a event listener
+     * 
+     * @param {String} event the event name
+     * @param {*} callback 
+     */
+    on(event, callback){
+        if(event && typeof callback === "function"){
+            if(!this.events[event]){
+                this.events[event] = [];
+            }
+
+            this.events[event].push(callback);
+        }
+    }
+
+    /**
+     * Remove a event listener
+     * 
+     * @param {String} event the event name 
+     * @param {*} callback 
+     */
+    remove(event, callback){
+        if(this.events[event]){
+            for(let i = this.events[event].length - 1; i >= 0; i--){
+                if(callback === this.events[event][i]){
+                    this.events[event].splice(i, 1);
+                }
+            }
+        }
+    }
+
+    /**
+     * trigger a callback event
+     * 
+     * @param {String} event the event name
+     * @param {*} that 
+     * @param {*} args 
+     */
+    triggerCallback(event, that, args){
+        console.log("Trigger Event", event);
+        if(this.events[event]){
+            for(let i = 0; i < this.events[event].length; i++){
+                try{
+                    this.events[event][i].apply(that, args);
+                } catch(err){}
+            }
+        }
+    }
+}
+
+module.exports = JSEvents;
+},{}],5:[function(require,module,exports){
 
 Element.prototype.createChild = function(type, options){
     let el = document.createChild(type, options);
@@ -744,60 +796,61 @@ document.createChild = function(type, options){
 
     return el;
 };
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+(function (global){
 // run onload of the doc
 const project = require("projects");
+window.projects = project;
+
+// window.modal = require("modal");
+
 require("./sidebar");
 require("./createChild");
 
 project.updateVisualList();
 
-window.addEventListener("hashchange", function(){
+window.addEventListener("hashchange", function () {
     onHashChange();
 });
 onHashChange();
 
-function onHashChange(){
+function onHashChange() {
     let hash = location.hash;
-    if(hash.includes("#project_")){
+    if (hash.includes("#project_")) {
         let name = decodeURI(hash.replace("#project_", ""));
+
+        project.open(name)
+            .catch(function (err) {
+                project.loadDemo();
+            });
         console.log(name);
+    } else {
+        if (!global.openFile) {
+            // get and save the demo file
+            project.loadDemo();
+        }
     }
 }
 
 /**
  * add event for the new project form
  */
-$("#new-project-form").on("submit", function(event){
+$("#new-project-form").on("submit", function (event) {
     event.preventDefault();
+    let file = null;
 
-    project.new($( this ).serializeArray()).then(function(file){
-        // open the created project
-        let newFile = project.open(file.name);
-        newFile.setData(file);
-
-        $('#projectsModal').modal('hide');
-        $("#new-project-form-warning-div").hide();
-    }).catch(function(err){
-        let msg = err.message;
-        $("#new-project-form-warning").text(msg);
-        $("#new-project-form-warning-div").show();
-    });
-});
-
-
-// get and save the demo file
-fetch("demo.json").then(function(response){
-    return response.json();
-
-}).then(function(data){
-    project.save(data);
-    // open the file
-    let name = data.name;
-    project.open(name);
-
-}).catch(function(err){
-    console.error(err);
+    project.new($(this).serializeArray())
+        .then(function (f) {
+            console.log(f);
+            
+            $('#projectsModal').modal('hide');
+            $("#new-project-form-warning-div").hide();
+        })
+        .catch(function (err) {
+            let msg = err.message;
+            $("#new-project-form-warning").text(msg);
+            $("#new-project-form-warning-div").show();
+        });
 });
 
 let div = document.getElementById("files-list-menu");
@@ -852,7 +905,8 @@ const FileTree = require("filetree");
 
 
 // console.log(fileTree);
-},{"./createChild":4,"./sidebar":6,"filetree":2,"projects":8}],6:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./createChild":5,"./sidebar":7,"filetree":2,"projects":11}],7:[function(require,module,exports){
 var min = 175;
 var max = 400;
 var mainmin = 150;
@@ -871,22 +925,200 @@ $('#split-bar').mousedown(function (e) {
 $(document).mouseup(function (e) {
     $(document).unbind('mousemove');
 });
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+const JSEvents = require("jsevents");
+
+class jsModal {
+
+    constructor(heading, content, success, cancel) {
+        this.success = typeof success === "string" ? success : "Submit";
+        this.cancel = typeof cancel === "string" ? cancel : "Cancel";
+
+        this.events = new JSEvents(this);
+
+        this.modalContent = document.createChild("div");
+        this.heading = heading;
+
+        this.create();
+
+        this.content = content;
+    }
+
+    /**
+     * set the modal content
+     */
+    set content(content) {
+        this.modalContent = content;
+        // refresh the content in the modal
+        let body = this.elements.body;
+        body.innerHTML = "";
+        body.appendChild(this.modalContent);
+    }
+    /**
+     * get the modal content
+     */
+    get content() {
+        return this.modalContent;
+    }
+
+    get successBtn() {
+        return this.elements.successBtn;
+    }
+
+    get cancelBtn() {
+        return this.elements.cancelBtn;
+    }
+
+    /**
+     * create the modal
+     */
+    create() {
+        const that = this;
+        this.elements = {};
+
+        // create the modal
+        let dialog = document.createChild("div", {
+            classList: ["modal", "hide", "fade", "in"],
+            style: "display: none;",
+            childNodes: [{
+                type: "div",
+                options: {
+                    classList: ["modal-dialog"]
+                }
+            }]
+        });
+        this.dialog = dialog;
+
+        let modal = dialog.firstChild.createChild("div", {
+            classList: ["modal-content"]
+        })
+        this.modal = modal;
+
+        // create the header
+        let headDiv = modal.createChild("div")
+        this.elements.heading = headDiv.createChild("div", {
+            classList: ["modal-header"]
+        });
+
+        this.elements.header = this.elements.heading.createChild("h5", {
+            text: this.heading,
+            classList: ["modal-title"]
+        });
+
+        this.elements.heading.createChild("button", {
+            type: "button",
+            classList: ["close"],
+            "data-dismiss": "modal",
+            "aria-label": "Close",
+            childNodes: [{
+                type: "span",
+                options: {
+                    "aria-hidden": "true",
+                    text: "×"
+                }
+            }]
+        });
+
+        // create the body
+        let body = modal.createChild("div", {
+            classList: ["modal-body"]
+        });
+        this.elements.body = body;
+
+        body.innerHTML = "";
+        body.appendChild(this.modalContent);
+
+        // create the footer
+        let footer = modal.createChild("div", {
+            classList: ["modal-footer"]
+        });
+        this.elements.footer = footer;
+
+        let successBtn = footer.createChild("span", {
+            classList: ["btn", "btn-success"],
+            text: this.success,
+            on: {
+                click: function () {
+                    console.log("Trigger Success function");
+                    that.events.triggerCallback("success", that, []);
+                }
+            }
+        });
+        this.elements.successBtn = successBtn;
+
+        let cancelBtn = footer.createChild("span", {
+            classList: ["btn"],
+            "data-dismiss": "modal",
+            text: this.cancel,
+            on: {
+                click: function () {
+                    that.events.triggerCallback("cancel", that, []);
+                }
+            }
+        });
+        this.elements.cancelBtn = cancelBtn;
+
+        document.body.appendChild(dialog);
+
+        this.show();
+    }
+
+    /**
+     * show the dialog
+     */
+    show() {
+        $(this.dialog).modal();
+    }
+
+    /**
+     * hide the dialog
+     */
+    hide() {
+        $(this.dialog).modal("hide");
+    }
+
+    /**
+     * remove the modal element
+     */
+    destroy() {
+        const that = this;
+
+        if (this.dialog.style.display === "none") {
+            $(this.dialog).remove();
+        } else{
+            this.hide();
+            setTimeout(function(){
+                that.destroy();
+            }, 500);
+        }
+    }
+}
+
+module.exports = jsModal;
+},{"jsevents":4}],9:[function(require,module,exports){
 let project = require("projects");
 const FileTree = require("filetree");
+const JSEvents = require("jsevents");
+const newFileStructure = require("./newfile.js");
+
+const projectSettings = require("./settings");
+
 
 class ProjectFile{
     constructor(name){
+        this.name = name;
         this.setup();
         const that = this;
 
-        // load the file
+        // load the project
         project.load(name).then(function(data){
+            console.log("loading Data");
             that.setFile(data);
 
-        }).catch(function(){
-            // then this is a new file
-            console.log("New File");
+        }).catch(function(err){
+            console.warn(err);
+            // then this is a new project
+            console.log("New Project");
             that.file.name = name;
             that.save();
         });
@@ -895,8 +1127,9 @@ class ProjectFile{
 
     onLoad(){
         let projectEl = document.getElementById("project-list-current");
-
         projectEl.innerText = this.file.name;
+
+        this.events.triggerCallback("load", this, []);
     }
 
     setFile(file){
@@ -912,30 +1145,22 @@ class ProjectFile{
                 name: d
             };
 
-            this.fileTrees[d] = new FileTree(
+            let tree = new FileTree(
                 element, 
                 this.file.data[d].files, 
                 options
             );
-
+            this.treeSetup(tree, d);
+            this.fileTrees[d] = tree;
         }
 
         this.onLoad();
     }
 
     setup(){
-        this.file = {
-            name: "",
-            namespace: "",
-            data: {
-                advancements:{},
-                functions:{},
-                loot_tables:{},
-                structures:{},
-                recipes:{},
-                tags:{}
-            }
-        };
+        this.file = newFileStructure();
+
+        this.events = new JSEvents(this);
     }
 
     setData(data){
@@ -947,6 +1172,18 @@ class ProjectFile{
         }
 
         return this;
+    }
+
+    /**
+     * set the event handlers for the file trees
+     * 
+     * @param {FileTree} tree the file tree class
+     */
+    treeSetup(tree, name){
+        tree.on("file-opened", function(file){
+            console.log("Opening File", file);
+            // open the blocky file editor class
+        });
     }
 
     /**
@@ -967,18 +1204,72 @@ class ProjectFile{
     updateDOM(){
 
     }
+
+    settings(){
+        const that = this;
+
+        let settings = new projectSettings(this);
+
+        settings.on("save", function(){
+
+        });
+
+        settings.on("delete", function(){
+            console.log("Delete Project");
+            project.delete(that.name)
+                .then(function(){
+                    // deleted load the demo and scrap the settings menu
+                    settings.close();
+                    project.loadDemo();
+                })
+                .catch(function(err){
+                    // not deleted for some reason
+                    // TODO: send to message to a toast
+                    console.log("Delete Request Canceled", err.message);
+                });
+        });
+    }
 }
 
 module.exports = ProjectFile;
-},{"filetree":2,"projects":8}],8:[function(require,module,exports){
+},{"./newfile.js":10,"./settings":12,"filetree":2,"jsevents":4,"projects":11}],10:[function(require,module,exports){
+module.exports = function () {
+    return {
+        name: "",
+        namespace: "",
+        data: {
+            advancements: {
+                files: []
+            },
+            functions: {
+                files: []
+            },
+            loot_tables: {
+                files: []
+            },
+            structures: {
+                files: []
+            },
+            recipes: {
+                files: []
+            },
+            tags: {
+                files: []
+            }
+        }
+    };
+};
+},{}],11:[function(require,module,exports){
 (function (global){
+const ProjectFile = require("./file.js");
+const newFileStructure = require("./newfile.js");
 
 /**
  * get the list of local projects
  * 
  * @returns {Promise}
  */
-async function getList () {
+async function getList() {
     let names = [];
 
     let pro = localStorage.getItem("projects");
@@ -998,13 +1289,13 @@ module.exports.list = getList;
 /**
  * update the projects list on the upper left
  */
-function updateVisualList(){
+function updateVisualList() {
     let div = $("#project-list-dropdown");
     div.empty();
 
-    getList().then(function(li){
+    getList().then(function (li) {
         li.sort();
-        for(let i = 0; i < li.length; i++){
+        for (let i = 0; i < li.length; i++) {
             let name = li[i];
 
             let a = document.createElement("a");
@@ -1022,14 +1313,14 @@ module.exports.updateVisualList = updateVisualList;
  * 
  * @param {String} name the project name
  */
-async function loadProject(name){
+async function loadProject(name) {
     let pro = localStorage.getItem("projects");
     if (pro) {
         let list = JSON.parse(pro);
 
         for (let i = 0; i < list.length; i++) {
             let project = list[i];
-            if(project.name === name){
+            if (project.name === name) {
                 return project;
             }
         }
@@ -1040,6 +1331,26 @@ async function loadProject(name){
 
 module.exports.load = loadProject;
 
+module.exports.loadDemo = function () {
+    fetch("demo.json").then(function (response) {
+        return response.json();
+
+    }).then(function (data) {
+        saveFunction(data)
+            .then(function () {
+                let name = data.name;
+                openProject(name);
+            })
+            .catch(function (err) {
+                console.error(err);
+                console.error(new Error("Failed to save the demo"));
+            });
+
+    }).catch(function (err) {
+        console.error(err);
+    });
+}
+
 /**
  * Create a new project and save it
  * 
@@ -1047,68 +1358,209 @@ module.exports.load = loadProject;
  * 
  * @returns {Promise}
  */
-module.exports.new = async function(data){
+module.exports.new = async function (data) {
     let name = null;
-    let file = {};
-    for(let i = 0; i < data.length; i++){
+    let file = newFileStructure();
+
+    // add all the form data to the file
+    for (let i = 0; i < data.length; i++) {
         file[data[i].name] = data[i].value;
     }
-    if(file.name){
+
+    // set the name var
+    if (file.name) {
         name = file.name;
     }
-    if(name === null || name === ""){
+    if (name === null || name === "") {
         throw new Error("Data Pack name can't be blank.");
     }
-    if(file.namespace === null || file.namespace === ""){
+    if (file.namespace === null || file.namespace === "") {
         throw new Error("Namespace can't be blank");
     }
-    return file;
+    
+    // save the file and open it
+    await saveFunction(file);
+
+    // open the file
+    let newFile = null;
+    await openProject(name).then(function(f){
+        newFile = f;
+    });
+
+    return newFile;
 };
 
 /**
  * load a project and open it
  * 
  * @param {String} name the project name
+ * @returns {Promise}
  */
-module.exports.open = function(name){
-    const ProjectFile = require("./file.js");
+function openProject(name) {
+    return new Promise(function (resolve, reject) {
+        // check if the project exists
+        loadProject(name)
+            .then(function () {
+                let file = new ProjectFile(name);
+                global.openFile = file;
 
-    let file = new ProjectFile(name);
-
-    global.openFile = file;
-
-    return file;
-};
+                resolve(file);
+            })
+            .catch(function (err) {
+                reject(err);
+            });
+    });
+}
+module.exports.open = openProject;
 
 /**
  * save the file to localStorage
  * 
  * @param {Object} file the file object
  */
-module.exports.save = async function(file){
+async function saveFunction(file) {
     let pro = localStorage.getItem("projects");
     let list = [];
     let saved = false;
 
     if (pro) {
         list = JSON.parse(pro);
-        
+
 
         for (let i = 0; i < list.length; i++) {
             let project = list[i];
-            if(project.name === file.name){
+            if (project.name === file.name) {
                 list[i] = file;
                 saved = true;
             }
         }
     }
-    if(!saved){
+    if (!saved) {
         list.push(file);
     }
     localStorage.setItem("projects", JSON.stringify(list));
-    setTimeout(function(){
+    setTimeout(function () {
         updateVisualList();
     }, 1);
 };
+module.exports.save = saveFunction;
+
+/**
+ * delete a project from the browser cache
+ * 
+ * @param {String} name the project name
+ * 
+ * @returns {Promise}
+ */
+function deleteProject(name) {
+    return new Promise(function (resolve, reject) {
+        loadProject(name)
+            .then(function (data) {
+                if (confirm("Are you sure you want to delete '" + name + "'?")) {
+                    let pro = localStorage.getItem("projects");
+                    let deleted = false;
+                    if (pro) {
+                        let list = JSON.parse(pro);
+
+                        for (let i = list.length - 1; i >= 0; i--) {
+                            let project = list[i];
+                            if (project.name === name) {
+                                list.splice(i, 1);
+                                deleted = true;
+                            }
+                        }
+                        localStorage.setItem("projects", JSON.stringify(list));
+                        setTimeout(function () {
+                            updateVisualList();
+                        }, 1);
+                    }
+
+                    if (!deleted) {
+                        reject(new Error("Project Not Found or otherwise wasn't able to be deleted"));
+                    } else{
+                        resolve();
+                    }
+                } else {
+                    reject(new Error("Delete cancelled."));
+                }
+            })
+            .catch(function (err) {
+                reject(err);
+            })
+    });
+};
+
+module.exports.delete = deleteProject;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./file.js":7}]},{},[1]);
+},{"./file.js":9,"./newfile.js":10}],12:[function(require,module,exports){
+const jsEvents = require("jsevents");
+
+const Modal = require("modal");
+
+
+class ProjectFileSettings {
+
+    constructor(that){
+        this.events = new jsEvents(this);
+        this.parent = that;
+
+        this.open();
+    }
+
+    /**
+     * open a settings dialog
+     */
+    open(){
+        const that = this;
+        let content = document.createChild("p", {
+            text: "Set some settings"
+        });
+
+        content.appendChild(this.deleteButton);
+
+        let modal = new Modal(this.parent.name + " settings", content, "Save");
+        console.log(modal);
+        modal.on("cancel", function(){
+            this.destroy();
+            that.modal = null;
+        });
+
+        modal.on("success", function(){
+            console.log("Submitted");
+            this.destroy();
+            that.modal = null;
+        });
+
+        this.modal = modal;
+    }
+
+    close(){
+        if(this.modal){
+            this.modal.destroy();
+        }
+    }
+
+    get deleteButton(){
+        const that = this;
+        let button = document.createChild("button", {
+            classList: ["btn", "btn-danger", "float-right"],
+            type: "button",
+            text: "Delete",
+            on :{
+                click: function(){
+                    that.events.triggerCallback("delete", that, []);
+                }
+            }
+        });
+
+        button.insertBefore(document.createChild("i", {
+            classList: ["material-icons", "align-middle"],
+            text: "delete"
+        }), button.firstChild);
+
+        return button;
+    }
+}
+
+module.exports = ProjectFileSettings;
+},{"jsevents":4,"modal":8}]},{},[1]);
