@@ -3,7 +3,489 @@
 $( document ).ready(function(){
     require("load");
 });
-},{"load":6}],2:[function(require,module,exports){
+},{"load":14}],2:[function(require,module,exports){
+// load all of the blocks
+console.log("Load Blockly");
+require("./generators/functions.js");
+
+// require("./blocks/string.js");
+// require("./blocks/say.js");
+require("./loadAllBlocks.js");
+
+const blocklyDiv = document.getElementById('content');
+
+module.exports.start = function () {
+
+    var workspace = Blockly.inject(blocklyDiv,
+        { toolbox: document.getElementById('toolbox') });
+
+    function myUpdateFunction(event) {
+        var code = Blockly.Functions.workspaceToCode(workspace);
+        console.log("%c---------------------", "color: grey;");
+        console.log(code);
+        console.log("%c---------------------", "color: grey;");
+
+    }
+    workspace.addChangeListener(myUpdateFunction);
+
+    window.workspace = workspace;
+};
+},{"./generators/functions.js":8,"./loadAllBlocks.js":9}],3:[function(require,module,exports){
+Blockly.Blocks['coords'] = {
+    init: function () {
+      this.jsonInit({
+        "message0": '"X %1 Y %2 Z %3"',
+        "args0": [
+          {
+            "type": "field_input",
+            "name": "X",
+            "text": "~"
+          }, {
+            "type": "field_input",
+            "name": "Y",
+            "text": "~"
+          },{
+            "type": "field_input",
+            "name": "Z",
+            "text": "~"
+          }
+        ],
+        "output": "String",
+        "colour": 160,
+        "tooltip": "Set a value with a string",
+        "helpUrl": ""
+      });
+    }
+  };
+  
+  Blockly.Functions["coords"] = function (block) {
+    let x = block.getFieldValue("X");
+    let y = block.getFieldValue("Y");
+    let z = block.getFieldValue("Z");
+
+    let val = x + " " + y + " " + z;
+    // return val;
+    return [val, Blockly.Functions.ORDER_MEMBER];
+  };
+},{}],4:[function(require,module,exports){
+const items = require("minecraft").items;
+for(let i = 0; i < items.length; i++){
+
+    items[i][1] = "minecraft:" + items[i][1];
+}
+
+let options = {
+    "message0": "%1",
+    "args0": [
+        {
+            "type": "field_dropdown",
+            "name": "BLOCK",
+            "options": items
+        }
+    ],
+    "output": "String",
+    "colour": 160,
+    "tooltip": "set the block or item type",
+    "helpUrl": ""
+};
+
+console.log(options);
+
+Blockly.Blocks['items'] = {
+    init: function () {
+        this.jsonInit(options);
+    }
+};
+
+Blockly.Functions["items"] = function (block) {
+    let val = block.getFieldValue("BLOCK") || "minecraft: stone";
+    // return val;
+    return [val, Blockly.Functions.ORDER_MEMBER];
+};
+},{"minecraft":17}],5:[function(require,module,exports){
+Blockly.Blocks['say'] = {
+    init: function () {
+        this.jsonInit({
+            "message0": '/say %1',
+            "args0": [
+                {
+                    "type": "input_value",
+                    "name": "VALUE",
+                    "check": "String"
+                }
+            ],
+            "previousStatement": "Action",
+            "nextStatement": "Action",
+            "colour": 160,
+            "tooltip": "Displays a message to multiple players.",
+            "helpUrl": "https://minecraft.gamepedia.com/Commands/say"
+        });
+    }
+};
+
+Blockly.Functions["say"] = function (block) {
+    // Search the text for a substring.
+    let val = Blockly.Functions.valueToCode(block, 'VALUE', Blockly.Functions.ORDER_NONE) || "";
+
+    let command = "/say " + val + "\n";
+    return command;
+};
+},{}],6:[function(require,module,exports){
+Blockly.Blocks['setblock'] = {
+    init: function () {
+        this.jsonInit({
+            "message0": '/setblock %1 block %2 %3',
+            "args0": [
+                {
+                    "type": "input_value",
+                    "name": "COORDS",
+                    "check": "String"
+                },{
+                    "type": "input_value",
+                    "name": "BLOCK",
+                    "check": "String"
+                }, {
+                    "type": "input_value",
+                    "name": "MODE",
+                    "check": "String"
+                }
+            ],
+            "previousStatement": "Action",
+            "nextStatement": "Action",
+            "colour": 160,
+            "tooltip": "Set a block at location",
+            "helpUrl": "https://minecraft.gamepedia.com/Commands/setblock"
+        });
+    }
+};
+
+Blockly.Functions["setblock"] = function (block) {
+    // Search the text for a substring.
+    let coords = Blockly.Functions.valueToCode(block, 'COORDS', Blockly.Functions.ORDER_NONE) || "~ ~ ~";
+
+    let blockName = Blockly.Functions.valueToCode(block, 'BLOCK', Blockly.Functions.ORDER_NONE) || "minecraft:stone";
+
+    let mode = Blockly.Functions.valueToCode(block, 'MODE', Blockly.Functions.ORDER_NONE) || "";
+
+    let command = "/setblock " + coords + " " + blockName + " " + mode + "\n";
+    return command;
+};
+},{}],7:[function(require,module,exports){
+Blockly.Blocks['string'] = {
+  init: function () {
+    this.jsonInit({
+      "message0": '"%1"',
+      "args0": [
+        {
+          "type": "field_input",
+          "name": "TEXT",
+          "text": ""
+        }
+      ],
+      "output": "String",
+      "colour": 160,
+      "tooltip": "Set a value with a string",
+      "helpUrl": ""
+    });
+  }
+};
+
+Blockly.Functions["string"] = function (block) {
+  let val = block.getFieldValue("TEXT");
+  // return val;
+  return [val, Blockly.Functions.ORDER_MEMBER];
+};
+},{}],8:[function(require,module,exports){
+'use strict';
+
+
+/**
+ * Functions code generator.
+ * @type {!Blockly.Generator}
+ */
+Blockly.Functions = new Blockly.Generator('Functions');
+
+/**
+ * List of illegal variable names.
+ * This is not intended to be a security feature.  Blockly is 100% client-side,
+ * so bypassing this list is trivial.  This is intended to prevent users from
+ * accidentally clobbering a built-in object or function.
+ * @private
+ */
+Blockly.Functions.addReservedWords('Blockly, execute');
+
+/**
+ * Order of operation ENUMs.
+ * https://developer.mozilla.org/en/Functions/Reference/Operators/Operator_Precedence
+ */
+Blockly.Functions.ORDER_ATOMIC = 0;           // 0 "" ...
+Blockly.Functions.ORDER_NEW = 1.1;            // new
+Blockly.Functions.ORDER_MEMBER = 1.2;         // . []
+Blockly.Functions.ORDER_FUNCTION_CALL = 2;    // ()
+Blockly.Functions.ORDER_INCREMENT = 3;        // ++
+Blockly.Functions.ORDER_DECREMENT = 3;        // --
+Blockly.Functions.ORDER_BITWISE_NOT = 4.1;    // ~
+Blockly.Functions.ORDER_UNARY_PLUS = 4.2;     // +
+Blockly.Functions.ORDER_UNARY_NEGATION = 4.3; // -
+Blockly.Functions.ORDER_LOGICAL_NOT = 4.4;    // !
+Blockly.Functions.ORDER_TYPEOF = 4.5;         // typeof
+Blockly.Functions.ORDER_VOID = 4.6;           // void
+Blockly.Functions.ORDER_DELETE = 4.7;         // delete
+Blockly.Functions.ORDER_AWAIT = 4.8;          // await
+Blockly.Functions.ORDER_EXPONENTIATION = 5.0; // **
+Blockly.Functions.ORDER_MULTIPLICATION = 5.1; // *
+Blockly.Functions.ORDER_DIVISION = 5.2;       // /
+Blockly.Functions.ORDER_MODULUS = 5.3;        // %
+Blockly.Functions.ORDER_SUBTRACTION = 6.1;    // -
+Blockly.Functions.ORDER_ADDITION = 6.2;       // +
+Blockly.Functions.ORDER_BITWISE_SHIFT = 7;    // << >> >>>
+Blockly.Functions.ORDER_RELATIONAL = 8;       // < <= > >=
+Blockly.Functions.ORDER_IN = 8;               // in
+Blockly.Functions.ORDER_INSTANCEOF = 8;       // instanceof
+Blockly.Functions.ORDER_EQUALITY = 9;         // == != === !==
+Blockly.Functions.ORDER_BITWISE_AND = 10;     // &
+Blockly.Functions.ORDER_BITWISE_XOR = 11;     // ^
+Blockly.Functions.ORDER_BITWISE_OR = 12;      // |
+Blockly.Functions.ORDER_LOGICAL_AND = 13;     // &&
+Blockly.Functions.ORDER_LOGICAL_OR = 14;      // ||
+Blockly.Functions.ORDER_CONDITIONAL = 15;     // ?:
+Blockly.Functions.ORDER_ASSIGNMENT = 16;      // = += -= **= *= /= %= <<= >>= ...
+Blockly.Functions.ORDER_YIELD = 17;         // yield
+Blockly.Functions.ORDER_COMMA = 18;           // ,
+Blockly.Functions.ORDER_NONE = 99;            // (...)
+
+/**
+ * List of outer-inner pairings that do NOT require parentheses.
+ * @type {!Array.<!Array.<number>>}
+ */
+Blockly.Functions.ORDER_OVERRIDES = [
+  // (foo()).bar -> foo().bar
+  // (foo())[0] -> foo()[0]
+  [Blockly.Functions.ORDER_FUNCTION_CALL, Blockly.Functions.ORDER_MEMBER],
+  // (foo())() -> foo()()
+  [Blockly.Functions.ORDER_FUNCTION_CALL, Blockly.Functions.ORDER_FUNCTION_CALL],
+  // (foo.bar).baz -> foo.bar.baz
+  // (foo.bar)[0] -> foo.bar[0]
+  // (foo[0]).bar -> foo[0].bar
+  // (foo[0])[1] -> foo[0][1]
+  [Blockly.Functions.ORDER_MEMBER, Blockly.Functions.ORDER_MEMBER],
+  // (foo.bar)() -> foo.bar()
+  // (foo[0])() -> foo[0]()
+  [Blockly.Functions.ORDER_MEMBER, Blockly.Functions.ORDER_FUNCTION_CALL],
+
+  // !(!foo) -> !!foo
+  [Blockly.Functions.ORDER_LOGICAL_NOT, Blockly.Functions.ORDER_LOGICAL_NOT],
+  // a * (b * c) -> a * b * c
+  [Blockly.Functions.ORDER_MULTIPLICATION, Blockly.Functions.ORDER_MULTIPLICATION],
+  // a + (b + c) -> a + b + c
+  [Blockly.Functions.ORDER_ADDITION, Blockly.Functions.ORDER_ADDITION],
+  // a && (b && c) -> a && b && c
+  [Blockly.Functions.ORDER_LOGICAL_AND, Blockly.Functions.ORDER_LOGICAL_AND],
+  // a || (b || c) -> a || b || c
+  [Blockly.Functions.ORDER_LOGICAL_OR, Blockly.Functions.ORDER_LOGICAL_OR]
+];
+
+/**
+ * Initialise the database of variable names.
+ * @param {!Blockly.Workspace} workspace Workspace to generate code from.
+ */
+Blockly.Functions.init = function(workspace) {
+  // Create a dictionary of definitions to be printed before the code.
+  Blockly.Functions.definitions_ = Object.create(null);
+  // Create a dictionary mapping desired function names in definitions_
+  // to actual function names (to avoid collisions with user functions).
+  Blockly.Functions.functionNames_ = Object.create(null);
+
+  if (!Blockly.Functions.variableDB_) {
+    Blockly.Functions.variableDB_ =
+        new Blockly.Names(Blockly.Functions.RESERVED_WORDS_);
+  } else {
+    Blockly.Functions.variableDB_.reset();
+  }
+
+  Blockly.Functions.variableDB_.setVariableMap(workspace.getVariableMap());
+
+  var defvars = [];
+  // Add developer variables (not created or named by the user).
+  var devVarList = Blockly.Variables.allDeveloperVariables(workspace);
+  for (var i = 0; i < devVarList.length; i++) {
+    defvars.push(Blockly.Functions.variableDB_.getName(devVarList[i],
+        Blockly.Names.DEVELOPER_VARIABLE_TYPE));
+  }
+
+  // Add user variables, but only ones that are being used.
+  var variables = Blockly.Variables.allUsedVarModels(workspace);
+  for (var i = 0; i < variables.length; i++) {
+    defvars.push(Blockly.Functions.variableDB_.getName(variables[i].getId(),
+        Blockly.Variables.NAME_TYPE));
+  }
+
+  // Declare all of the variables.
+  if (defvars.length) {
+    Blockly.Functions.definitions_['variables'] =
+        'var ' + defvars.join(', ') + ';';
+  }
+};
+
+/**
+ * Prepend the generated code with the variable definitions.
+ * @param {string} code Generated code.
+ * @return {string} Completed code.
+ */
+Blockly.Functions.finish = function(code) {
+  // Convert the definitions dictionary into a list.
+  var definitions = [];
+  for (var name in Blockly.Functions.definitions_) {
+    definitions.push(Blockly.Functions.definitions_[name]);
+  }
+  // Clean up temporary data.
+  delete Blockly.Functions.definitions_;
+  delete Blockly.Functions.functionNames_;
+  Blockly.Functions.variableDB_.reset();
+  return definitions.join('\n\n') + '\n\n\n' + code;
+};
+
+/**
+ * Naked values are top-level blocks with outputs that aren't plugged into
+ * anything.  A trailing semicolon is needed to make this legal.
+ * @param {string} line Line of generated code.
+ * @return {string} Legal line of code.
+ */
+Blockly.Functions.scrubNakedValue = function(line) {
+  return line + ';\n';
+};
+
+/**
+ * Encode a string as a properly escaped Functions string, complete with
+ * quotes.
+ * @param {string} string Text to encode.
+ * @return {string} Functions string.
+ * @private
+ */
+Blockly.Functions.quote_ = function(string) {
+  // Can't use goog.string.quote since Google's style guide recommends
+  // JS string literals use single quotes.
+  string = string.replace(/\\/g, '\\\\')
+                 .replace(/\n/g, '\\\n')
+                 .replace(/'/g, '\\\'');
+  return '\'' + string + '\'';
+};
+
+/**
+ * Common tasks for generating Functions from blocks.
+ * Handles comments for the specified block and any connected value blocks.
+ * Calls any statements following this block.
+ * @param {!Blockly.Block} block The current block.
+ * @param {string} code The Functions code created for this block.
+ * @return {string} Functions code with comments and subsequent blocks added.
+ * @private
+ */
+Blockly.Functions.scrub_ = function(block, code) {
+  var commentCode = '';
+  // Only collect comments for blocks that aren't inline.
+  if (!block.outputConnection || !block.outputConnection.targetConnection) {
+    // Collect comment for this block.
+    var comment = block.getCommentText();
+    comment = Blockly.utils.wrap(comment, Blockly.Functions.COMMENT_WRAP - 3);
+    if (comment) {
+      if (block.getProcedureDef) {
+        // Use a comment block for function comments.
+        commentCode += '/**\n' +
+                       Blockly.Functions.prefixLines(comment + '\n', ' * ') +
+                       ' */\n';
+      } else {
+        commentCode += Blockly.Functions.prefixLines(comment + '\n', '// ');
+      }
+    }
+    // Collect comments for all value arguments.
+    // Don't collect comments for nested statements.
+    for (var i = 0; i < block.inputList.length; i++) {
+      if (block.inputList[i].type == Blockly.INPUT_VALUE) {
+        var childBlock = block.inputList[i].connection.targetBlock();
+        if (childBlock) {
+          var comment = Blockly.Functions.allNestedComments(childBlock);
+          if (comment) {
+            commentCode += Blockly.Functions.prefixLines(comment, '// ');
+          }
+        }
+      }
+    }
+  }
+  var nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+  var nextCode = Blockly.Functions.blockToCode(nextBlock);
+  return commentCode + code + nextCode;
+};
+
+/**
+ * Gets a property and adjusts the value while taking into account indexing.
+ * @param {!Blockly.Block} block The block.
+ * @param {string} atId The property ID of the element to get.
+ * @param {number=} opt_delta Value to add.
+ * @param {boolean=} opt_negate Whether to negate the value.
+ * @param {number=} opt_order The highest order acting on this value.
+ * @return {string|number}
+ */
+Blockly.Functions.getAdjusted = function(block, atId, opt_delta, opt_negate,
+    opt_order) {
+  var delta = opt_delta || 0;
+  var order = opt_order || Blockly.Functions.ORDER_NONE;
+  if (block.workspace.options.oneBasedIndex) {
+    delta--;
+  }
+  var defaultAtIndex = block.workspace.options.oneBasedIndex ? '1' : '0';
+  if (delta > 0) {
+    var at = Blockly.Functions.valueToCode(block, atId,
+        Blockly.Functions.ORDER_ADDITION) || defaultAtIndex;
+  } else if (delta < 0) {
+    var at = Blockly.Functions.valueToCode(block, atId,
+        Blockly.Functions.ORDER_SUBTRACTION) || defaultAtIndex;
+  } else if (opt_negate) {
+    var at = Blockly.Functions.valueToCode(block, atId,
+        Blockly.Functions.ORDER_UNARY_NEGATION) || defaultAtIndex;
+  } else {
+    var at = Blockly.Functions.valueToCode(block, atId, order) ||
+        defaultAtIndex;
+  }
+
+  if (Blockly.isNumber(at)) {
+    // If the index is a naked number, adjust it right now.
+    at = parseFloat(at) + delta;
+    if (opt_negate) {
+      at = -at;
+    }
+  } else {
+    // If the index is dynamic, adjust it in code.
+    if (delta > 0) {
+      at = at + ' + ' + delta;
+      var innerOrder = Blockly.Functions.ORDER_ADDITION;
+    } else if (delta < 0) {
+      at = at + ' - ' + -delta;
+      var innerOrder = Blockly.Functions.ORDER_SUBTRACTION;
+    }
+    if (opt_negate) {
+      if (delta) {
+        at = '-(' + at + ')';
+      } else {
+        at = '-' + at;
+      }
+      var innerOrder = Blockly.Functions.ORDER_UNARY_NEGATION;
+    }
+    innerOrder = Math.floor(innerOrder);
+    order = Math.floor(order);
+    if (innerOrder && order >= innerOrder) {
+      at = '(' + at + ')';
+    }
+  }
+  return at;
+};
+
+},{}],9:[function(require,module,exports){
+require("./blocks/say");
+require("./blocks/setBlock");
+require("./blocks/string");
+require("./blocks/items");
+require("./blocks/coords");
+},{"./blocks/coords":3,"./blocks/items":4,"./blocks/say":5,"./blocks/setBlock":6,"./blocks/string":7}],10:[function(require,module,exports){
 let idNum = 0;
 const html = require("html");
 const JSEvents = require("jsevents");
@@ -34,6 +516,9 @@ class FileTree{
         this.createHtml();
     }
 
+    /**
+     * run the class setup vars
+     */
     setup(){
         this.events = new JSEvents(this);
         const that = this;
@@ -201,6 +686,11 @@ class FileTree{
         }
     }
 
+    /**
+     * check if the dir given is the root directory
+     * 
+     * @param {*} data 
+     */
     isRoot(data){
         return this.structure === data;
     }
@@ -234,7 +724,6 @@ class FileTree{
      * @param {Object} args the args to pass into function
      */
     triggerEvent(event, args){
-        console.log(this.events);
         this.events.triggerCallback(event, this, args);
     }
 
@@ -626,7 +1115,7 @@ class FileTree{
 }
 
 module.exports = FileTree;
-},{"html":3,"jsevents":4}],3:[function(require,module,exports){
+},{"html":11,"jsevents":12}],11:[function(require,module,exports){
 let ids = [];
 const str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -665,7 +1154,7 @@ function newId(len){
 }
 
 module.exports.newId = newId;
-},{}],4:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
 
 class JSEvents{
@@ -675,7 +1164,6 @@ class JSEvents{
         const that = this;
         if (caller) {
             caller.on = function (event, callback) {
-                console.log("Register", event);
                 that.on(event, callback);
             };
             caller.remove = function (event, callback) {
@@ -724,7 +1212,6 @@ class JSEvents{
      * @param {*} args 
      */
     triggerCallback(event, that, args){
-        console.log("Trigger Event", event);
         if(this.events[event]){
             for(let i = 0; i < this.events[event].length; i++){
                 try{
@@ -736,7 +1223,7 @@ class JSEvents{
 }
 
 module.exports = JSEvents;
-},{}],5:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
 Element.prototype.createChild = function(type, options){
     let el = document.createChild(type, options);
@@ -796,7 +1283,7 @@ document.createChild = function(type, options){
 
     return el;
 };
-},{}],6:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function (global){
 // run onload of the doc
 const project = require("projects");
@@ -842,7 +1329,7 @@ $("#new-project-form").on("submit", function (event) {
     project.new($(this).serializeArray())
         .then(function (f) {
             console.log(f);
-            
+
             $('#projectsModal').modal('hide');
             $("#new-project-form-warning-div").hide();
         })
@@ -853,61 +1340,12 @@ $("#new-project-form").on("submit", function (event) {
         });
 });
 
-let div = document.getElementById("files-list-menu");
+const workspace = require("blockly");
 
-const FileTree = require("filetree");
-
-// let fileTree = new FileTree(div, [
-//     {
-//         type: "file",
-//         name: "File 1",
-//         contents: ""
-//     }, {
-//         type: "dir",
-//         name: "Folder 1",
-//         contents: [
-//             {
-//                 type: "file",
-//                 name: "File 2",
-//                 contents: ""
-//             }
-//         ]
-//     }
-// ], {
-//     name: "Functions"
-// });
-
-// fileTree.on("change", function(){
-//     console.log("Changed");
-// });
-
-// fileTree.on("selected", function(current){
-//     // console.log(current);
-// });
-
-// fileTree.on("file-opened", function(current){
-//     // console.log(current);
-// });
-
-// fileTree.on("dir-opened", function(current){
-//     // console.log(current);
-// });
-
-// fileTree.on("new-file", function(){
-//     // console.log("new file");
-// });
-// fileTree.on("new-dir", function(){
-//     // console.log("new dir");
-// });
-// fileTree.on("new", function(){
-//     // console.log("new file or dir");
-// });
-
-
-// console.log(fileTree);
+workspace.start();
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./createChild":5,"./sidebar":7,"filetree":2,"projects":11}],7:[function(require,module,exports){
-var min = 175;
+},{"./createChild":13,"./sidebar":15,"blockly":2,"projects":21}],15:[function(require,module,exports){
+var min = 195;
 var max = 400;
 var mainmin = 150;
 
@@ -918,14 +1356,461 @@ $('#split-bar').mousedown(function (e) {
         var x = e.pageX - $('#sidebar').offset().left;
         if (x > min && x < max && e.pageX < ($(window).width() - mainmin)) {  
           $('#sidebar').css("width", x);
-          $('#content').css("margin-left", x);
+          $('#content').css("left", x + "px");
         }
     })
 });
 $(document).mouseup(function (e) {
     $(document).unbind('mousemove');
 });
-},{}],8:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+module.exports = [["Stone", "stone"],
+["Granite", "granite"],
+["Polished Granite", "polished_granite"],
+["Diorite", "diorite"],
+["Polished Diorite", "polished_diorite"],
+["Andesite", "andesite"],
+["Polished Andesite", "polished_andesite"],
+["Grass Block", "grass_block"],
+["Dirt", "dirt"],
+["Coarse Dirt", "coarse_dirt"],
+["Podzol", "podzol"],
+["Oak Planks", "oak_planks"],
+["Spruce Planks", "spruce_planks"],
+["Birch Planks", "birch_planks"],
+["Jungle Planks", "jungle_planks"],
+["Acacia Planks", "acacia_planks"],
+["Dark Oak Planks", "dark_oak_planks"],
+["Oak Sapling", "oak_sapling"],
+["Spruce Sapling", "spruce_sapling"],
+["Birch Sapling", "birch_sapling"],
+["Jungle Sapling", "jungle_sapling"],
+["Acacia Sapling", "acacia_sapling"],
+["Dark Oak Sapling", "dark_oak_sapling"],
+["Sand", "sand"],
+["Red Sand", "red_sand"],
+["Oak Log", "oak_log"],
+["Spruce Log", "spruce_log"],
+["Birch Log", "birch_log"],
+["Jungle Log", "jungle_log"],
+["Oak Wood", "oak_wood"],
+["Spruce Wood", "spruce_wood"],
+["Birch Wood", "birch_wood"],
+["Jungle Wood", "jungle_wood"],
+["Acacia Log", "acacia_log"],
+["Dark Oak Log", "dark_oak_log"],
+["Acacia Wood", "acacia_wood"],
+["Dark Oak Wood", "dark_oak_wood"],
+["Oak Leaves", "oak_leaves"],
+["Spruce Leaves", "spruce_leaves"],
+["Birch Leaves", "birch_leaves"],
+["Jungle Leaves", "jungle_leaves"],
+["Acacia Leaves", "acacia_leaves"],
+["Dark Oak Leaves", "dark_oak_leaves"],
+["Sponge", "sponge"],
+["Wet Sponge", "wet_sponge"],
+["Sandstone", "sandstone"],
+["Chiseled Sandstone", "chiseled_sandstone"],
+["Cut Sandstone", "cut_sandstone"],
+["Note Block", "note_block"],
+["Powered Rail", "powered_rail"],
+["Cobweb", "cobweb"],
+["Dead Bush", "dead_bush"],
+["Grass", "grass"],
+["Fern", "fern"],
+["Dead Bush", "dead_bush"],
+["Moving Piston[ids note 1]", "moving_piston"],
+["White Wool", "white_wool"],
+["Orange Wool", "orange_wool"],
+["Magenta Wool", "magenta_wool"],
+["Light Blue Wool", "light_blue_wool"],
+["Yellow Wool", "yellow_wool"],
+["Lime Wool", "lime_wool"],
+["Pink Wool", "pink_wool"],
+["Gray Wool", "gray_wool"],
+["Light Gray Wool", "light_gray_wool"],
+["Cyan Wool", "cyan_wool"],
+["Purple Wool", "purple_wool"],
+["Blue Wool", "blue_wool"],
+["Brown Wool", "brown_wool"],
+["Green Wool", "green_wool"],
+["Red Wool", "red_wool"],
+["Black Wool", "black_wool"],
+["Dandelion", "dandelion"],
+["Poppy", "poppy"],
+["Blue Orchid", "blue_orchid"],
+["Allium", "allium"],
+["Azure Bluet", "azure_bluet"],
+["Red Tulip", "red_tulip"],
+["Orange Tulip", "orange_tulip"],
+["White Tulip", "white_tulip"],
+["Pink Tulip", "pink_tulip"],
+["Oxeye Daisy", "oxeye_daisy"],
+["Oak Slab", "oak_slab"],
+["Spruce Slab", "spruce_slab"],
+["Birch Slab", "birch_slab"],
+["Jungle Slab", "jungle_slab"],
+["Acacia Slab", "acacia_slab"],
+["Dark Oak Slab", "dark_oak_slab"],
+["Stone Slab", "stone_slab"],
+["Sandstone Slab", "sandstone_slab"],
+["Petrified Oak Slab", "petrified_oak_slab"],
+["Cobblestone Slab", "cobblestone_slab"],
+["Brick Slab", "brick_slab"],
+["Stone Brick Slab", "stone_brick_slab"],
+["Nether Brick Slab", "nether_brick_slab"],
+["Quartz Slab", "quartz_slab"],
+["Smooth Stone", "smooth_stone"],
+["Smooth Sandstone", "smooth_sandstone"],
+["Smooth Quartz", "smooth_quartz"],
+["Red Sandstone Slab", "red_sandstone_slab"],
+["Smooth Red Sandstone", "smooth_red_sandstone"],
+["Purpur Slab", "purpur_slab"],
+["Bricks", "bricks"],
+["Spawner", "spawner"],
+["Nether Portal", "nether_portal"],
+["Wall Torch[ids note 1]", "wall_torch"],
+["Torch", "torch"],
+["Furnace", "furnace"],
+["Cobblestone Stairs", "cobblestone_stairs"],
+["Oak Pressure Plate", "oak_pressure_plate"],
+["Redstone Ore", "redstone_ore"],
+["Redstone Wall Torch[ids note 1]", "redstone_wall_torch"],
+["Redstone Torch", "redstone_torch"],
+["Snow", "snow"],
+["Snow Block", "snow_block"],
+["Oak Fence", "oak_fence"],
+["Carved Pumpkin", "carved_pumpkin"],
+["Jack o\"Lantern", "jack_o_lantern"],
+["Oak Trapdoor", "oak_trapdoor"],
+["Infested Stone", "infested_stone"],
+["Infested Cobblestone", "infested_cobblestone"],
+["Infested Stone Bricks", "infested_stone_bricks"],
+["Infested Mossy Stone Bricks", "infested_mossy_stone_bricks"],
+["Infested Cracked Stone Bricks", "infested_cracked_stone_bricks"],
+["Infested Chiseled Stone Bricks", "infested_chiseled_stone_bricks"],
+["Stone Bricks", "stone_bricks"],
+["Mossy Stone Bricks", "mossy_stone_bricks"],
+["Cracked Stone Bricks", "cracked_stone_bricks"],
+["Chiseled Stone Bricks", "chiseled_stone_bricks"],
+["Brown Mushroom Block", "brown_mushroom_block"],
+["Mushroom Stem", "mushroom_stem"],
+["Red Mushroom Block", "red_mushroom_block"],
+["Melon", "melon"],
+["Oak Fence Gate", "oak_fence_gate"],
+["Lily Pad", "lily_pad"],
+["Nether Bricks", "nether_bricks"],
+["End Stone Bricks", "end_stone_bricks"],
+["Redstone Lamp", "redstone_lamp"],
+["Cobblestone Wall", "cobblestone_wall"],
+["Mossy Cobblestone Wall", "mossy_cobblestone_wall"],
+["Oak Button", "oak_button"],
+["Anvil", "anvil"],
+["Chipped Anvil", "chipped_anvil"],
+["Damaged Anvil", "damaged_anvil"],
+["Daylight Detector", "daylight_detector"],
+["Nether Quartz Ore", "nether_quartz_ore"],
+["Block of Quartz", "quartz_block"],
+["Chiseled Quartz Block", "chiseled_quartz_block"],
+["Quartz Pillar", "quartz_pillar"],
+["White Terracotta", "white_terracotta"],
+["Orange Terracotta", "orange_terracotta"],
+["Magenta Terracotta", "magenta_terracotta"],
+["Light Blue Terracotta", "light_blue_terracotta"],
+["Yellow Terracotta", "yellow_terracotta"],
+["Lime Terracotta", "lime_terracotta"],
+["Pink Terracotta", "pink_terracotta"],
+["Gray Terracotta", "gray_terracotta"],
+["Light Gray Terracotta", "light_gray_terracotta"],
+["Cyan Terracotta", "cyan_terracotta"],
+["Purple Terracotta", "purple_terracotta"],
+["Blue Terracotta", "blue_terracotta"],
+["Brown Terracotta", "brown_terracotta"],
+["Green Terracotta", "green_terracotta"],
+["Red Terracotta", "red_terracotta"],
+["Black Terracotta", "black_terracotta"],
+["White Carpet", "white_carpet"],
+["Orange Carpet", "orange_carpet"],
+["Magenta Carpet", "magenta_carpet"],
+["Light Blue Carpet", "light_blue_carpet"],
+["Yellow Carpet", "yellow_carpet"],
+["Lime Carpet", "lime_carpet"],
+["Pink Carpet", "pink_carpet"],
+["Gray Carpet", "gray_carpet"],
+["Light Gray Carpet", "light_gray_carpet"],
+["Cyan Carpet", "cyan_carpet"],
+["Purple Carpet", "purple_carpet"],
+["Blue Carpet", "blue_carpet"],
+["Brown Carpet", "brown_carpet"],
+["Green Carpet", "green_carpet"],
+["Red Carpet", "red_carpet"],
+["Black Carpet", "black_carpet"],
+["Terracotta", "terracotta"],
+["Slime Block", "slime_block"],
+["Sunflower", "sunflower"],
+["Lilac", "lilac"],
+["Double Tallgrass", "tall_grass"],
+["Large Fern", "large_fern"],
+["Rose Bush", "rose_bush"],
+["Peony", "peony"],
+["White Stained Glass", "white_stained_glass"],
+["Orange Stained Glass", "orange_stained_glass"],
+["Magenta Stained Glass", "magenta_stained_glass"],
+["Light Blue Stained Glass", "light_blue_stained_glass"],
+["Yellow Stained Glass", "yellow_stained_glass"],
+["Lime Stained Glass", "lime_stained_glass"],
+["Pink Stained Glass", "pink_stained_glass"],
+["Gray Stained Glass", "gray_stained_glass"],
+["Light Gray Stained Glass", "light_gray_stained_glass"],
+["Cyan Stained Glass", "cyan_stained_glass"],
+["Purple Stained Glass", "purple_stained_glass"],
+["Blue Stained Glass", "blue_stained_glass"],
+["Brown Stained Glass", "brown_stained_glass"],
+["Green Stained Glass", "green_stained_glass"],
+["Red Stained Glass", "red_stained_glass"],
+["Black Stained Glass", "black_stained_glass"],
+["White Stained Glass Pane", "white_stained_glass_pane"],
+["Orange Stained Glass Pane", "orange_stained_glass_pane"],
+["Magenta Stained Glass Pane", "magenta_stained_glass_pane"],
+["Light Blue Stained Glass Pane", "light_blue_stained_glass_pane"],
+["Yellow Stained Glass Pane", "yellow_stained_glass_pane"],
+["Lime Stained Glass Pane", "lime_stained_glass_pane"],
+["Pink Stained Glass Pane", "pink_stained_glass_pane"],
+["Gray Stained Glass Pane", "gray_stained_glass_pane"],
+["Light Gray Stained Glass Pane", "light_gray_stained_glass_pane"],
+["Cyan Stained Glass Pane", "cyan_stained_glass_pane"],
+["Purple Stained Glass Pane", "purple_stained_glass_pane"],
+["Blue Stained Glass Pane", "blue_stained_glass_pane"],
+["Brown Stained Glass Pane", "brown_stained_glass_pane"],
+["Green Stained Glass Pane", "green_stained_glass_pane"],
+["Red Stained Glass Pane", "red_stained_glass_pane"],
+["Black Stained Glass Pane", "black_stained_glass_pane"],
+["Prismarine", "prismarine"],
+["Prismarine Bricks", "prismarine_bricks"],
+["Dark Prismarine", "dark_prismarine"],
+["Red Sandstone", "red_sandstone"],
+["Chiseled Red Sandstone", "chiseled_red_sandstone"],
+["Cut Red Sandstone", "cut_red_sandstone"],
+["Magma Block", "magma_block"],
+["Red Nether Bricks", "red_nether_bricks"],
+["Light Gray Shulker Box", "light_gray_shulker_box"],
+["Light Gray Glazed Terracotta", "light_gray_glazed_terracotta"],
+["White Concrete", "white_concrete"],
+["Orange Concrete", "orange_concrete"],
+["Magenta Concrete", "magenta_concrete"],
+["Light Blue Concrete", "light_blue_concrete"],
+["Yellow Concrete", "yellow_concrete"],
+["Lime Concrete", "lime_concrete"],
+["Pink Concrete", "pink_concrete"],
+["Gray Concrete", "gray_concrete"],
+["Light Gray Concrete", "light_gray_concrete"],
+["Cyan Concrete", "cyan_concrete"],
+["Purple Concrete", "purple_concrete"],
+["Blue Concrete", "blue_concrete"],
+["Brown Concrete", "brown_concrete"],
+["Green Concrete", "green_concrete"],
+["Red Concrete", "red_concrete"],
+["Black Concrete", "black_concrete"],
+["White Concrete Powder", "white_concrete_powder"],
+["Orange Concrete Powder", "orange_concrete_powder"],
+["Magenta Concrete Powder", "magenta_concrete_powder"],
+["Light Blue Concrete Powder", "light_blue_concrete_powder"],
+["Yellow Concrete Powder", "yellow_concrete_powder"],
+["Lime Concrete Powder", "lime_concrete_powder"],
+["Pink Concrete Powder", "pink_concrete_powder"],
+["Gray Concrete Powder", "gray_concrete_powder"],
+["Light Gray Concrete Powder", "light_gray_concrete_powder"],
+["Cyan Concrete Powder", "cyan_concrete_powder"],
+["Purple Concrete Powder", "purple_concrete_powder"],
+["Blue Concrete Powder", "blue_concrete_powder"],
+["Brown Concrete Powder", "brown_concrete_powder"],
+["Green Concrete Powder", "green_concrete_powder"],
+["Red Concrete Powder", "red_concrete_powder"],
+["Black Concrete Powder", "black_concrete_powder"],
+["Oak Door", "oak_door"],
+["Redstone Repeater", "repeater"],
+["Redstone Comparator", "comparator"],
+["Coal", "coal"],
+["Charcoal", "charcoal"],
+["Golden Apple", "golden_apple"],
+["Enchanted Golden Apple", "enchanted_golden_apple"],
+["Sign", "sign"],
+["Water[ids note 1]", "water"],
+["Lava[ids note 1]", "lava"],
+["Oak Boat", "oak_boat"],
+["Sugar cane", "sugar_cane"],
+["Raw Cod", "cod"],
+["Raw Salmon", "salmon"],
+["Tropical Fish", "tropical_fish"],
+["Pufferfish", "pufferfish"],
+["Cooked Cod", "cooked_cod"],
+["Cooked Salmon", "cooked_salmon"],
+["Bone Meal", "bone_meal"],
+["Orange Dye", "orange_dye"],
+["Magenta Dye", "magenta_dye"],
+["Light Blue Dye", "light_blue_dye"],
+["Dandelion Yellow", "dandelion_yellow"],
+["Lime Dye", "lime_dye"],
+["Pink Dye", "pink_dye"],
+["Gray Dye", "gray_dye"],
+["Light Gray Dye", "light_gray_dye"],
+["Cyan Dye", "cyan_dye"],
+["Purple Dye", "purple_dye"],
+["Lapis Lazuli", "lapis_lazuli"],
+["Cocoa Beans", "cocoa_beans"],
+["Cactus Green", "cactus_green"],
+["Rose Red", "rose_red"],
+["Ink Sac", "ink_sac"],
+["White Bed", "white_bed"],
+["Orange Bed", "orange_bed"],
+["Magenta Bed", "magenta_bed"],
+["Light Blue Bed", "light_blue_bed"],
+["Yellow Bed", "yellow_bed"],
+["Lime Bed", "lime_bed"],
+["Pink Bed", "pink_bed"],
+["Gray Bed", "gray_bed"],
+["Light Gray Bed", "light_gray_bed"],
+["Cyan Bed", "cyan_bed"],
+["Purple Bed", "purple_bed"],
+["Blue Bed", "blue_bed"],
+["Brown Bed", "brown_bed"],
+["Green Bed", "green_bed"],
+["Red Bed", "red_bed"],
+["Black Bed", "black_bed"],
+["Melon Slice", "melon_slice"],
+["Pumpkin Stem[ids note 1]", "pumpkin_stem"],
+["Attached Pumpkin Stem[ids note 1]", "attached_pumpkin_stem"],
+["Melon Stem[ids note 1]", "melon_stem"],
+["Attached Melon Stem[ids note 1]", "attached_melon_stem"],
+["Glistering Melon Slice", "glistering_melon_slice"],
+["Bat Spawn Egg", "bat_spawn_egg"],
+["Blaze Spawn Egg", "blaze_spawn_egg"],
+["Cave Spider Spawn Egg", "cave_spider_spawn_egg"],
+["Chicken Spawn Egg", "chicken_spawn_egg"],
+["Cow Spawn Egg", "cow_spawn_egg"],
+["Creeper Spawn Egg", "creeper_spawn_egg"],
+["Donkey Spawn Egg", "donkey_spawn_egg"],
+["Elder Guardian Spawn Egg", "elder_guardian_spawn_egg"],
+["Enderman Spawn Egg", "enderman_spawn_egg"],
+["Endermite Spawn Egg", "endermite_spawn_egg"],
+["Evoker Spawn Egg", "evoker_spawn_egg"],
+["Ghast Spawn Egg", "ghast_spawn_egg"],
+["Guardian Spawn Egg", "guardian_spawn_egg"],
+["Horse Spawn Egg", "horse_spawn_egg"],
+["Husk Spawn Egg", "husk_spawn_egg"],
+["Llama Spawn Egg", "llama_spawn_egg"],
+["Magma Cube Spawn Egg", "magma_cube_spawn_egg"],
+["Mooshroom Spawn Egg", "mooshroom_spawn_egg"],
+["Mule Spawn Egg", "mule_spawn_egg"],
+["Ocelot Spawn Egg", "ocelot_spawn_egg"],
+["Parrot Spawn Egg", "parrot_spawn_egg"],
+["Pig Spawn Egg", "pig_spawn_egg"],
+["Polar Bear Spawn Egg", "polar_bear_spawn_egg"],
+["Rabbit Spawn Egg", "rabbit_spawn_egg"],
+["Sheep Spawn Egg", "sheep_spawn_egg"],
+["Shulker Spawn Egg", "shulker_spawn_egg"],
+["Silverfish Spawn Egg", "silverfish_spawn_egg"],
+["Skeleton Spawn Egg", "skeleton_spawn_egg"],
+["Skeleton Horse Spawn Egg", "skeleton_horse_spawn_egg"],
+["Slime Spawn Egg", "slime_spawn_egg"],
+["Spider Spawn Egg", "spider_spawn_egg"],
+["Squid Spawn Egg", "squid_spawn_egg"],
+["Stray Spawn Egg", "stray_spawn_egg"],
+["Vex Spawn Egg", "vex_spawn_egg"],
+["Villager Spawn Egg", "villager_spawn_egg"],
+["Vindicator Spawn Egg", "vindicator_spawn_egg"],
+["Witch Spawn Egg", "witch_spawn_egg"],
+["Wither Skeleton Spawn Egg", "wither_skeleton_spawn_egg"],
+["Wolf Spawn Egg", "wolf_spawn_egg"],
+["Zombie Spawn Egg", "zombie_spawn_egg"],
+["Zombie Horse Spawn Egg", "zombie_horse_spawn_egg"],
+["Zombie Pigman Spawn Egg", "zombie_pigman_spawn_egg"],
+["Zombie Villager Spawn Egg", "zombie_villager_spawn_egg"],
+["Flower Pot", "flower_pot"],
+["Potted Poppy[ids note 1]", "potted_poppy"],
+["Potted Dandelion[ids note 1]", "potted_dandelion"],
+["Potted Oak Sapling[ids note 1]", "potted_oak_sapling"],
+["Potted Spruce Sapling[ids note 1]", "potted_spruce_sapling"],
+["Potted Birch Sapling[ids note 1]", "potted_birch_sapling"],
+["Potted Jungle Sapling[ids note 1]", "potted_jungle_sapling"],
+["Potted Red Mushroom[ids note 1]", "potted_red_mushroom"],
+["Potted Brown Mushroom[ids note 1]", "potted_brown_mushroom"],
+["Potted Cactus[ids note 1]", "potted_cactus"],
+["Potted Dead Bush[ids note 1]", "potted_dead_bush"],
+["Potted Fern[ids note 1]", "potted_fern"],
+["Potted Acacia Sapling[ids note 1]", "potted_acacia_sapling"],
+["Potted Dark Oak Sapling[ids note 1]", "potted_dark_oak_sapling"],
+["Potted Blue Orchid[ids note 1]", "potted_blue_orchid"],
+["Potted Allium[ids note 1]", "potted_allium"],
+["Potted Azure Bluet[ids note 1]", "potted_azure_bluet"],
+["Potted Red Tulip[ids note 1]", "potted_red_tulip"],
+["Potted Orange Tulip[ids note 1]", "potted_orange_tulip"],
+["Potted White Tulip[ids note 1]", "potted_white_tulip"],
+["Potted Pink Tulip[ids note 1]", "potted_pink_tulip"],
+["Potted Oxeye Daisy[ids note 1]", "potted_oxeye_daisy"],
+["Skeleton Skull", "skeleton_skull"],
+["Skeleton Wall Skull[ids note 1]", "skeleton_wall_skull"],
+["Wither Skeleton Skull", "wither_skeleton_skull"],
+["Wither Skeleton Wall Skull[ids note 1]", "wither_skeleton_wall_skull"],
+["Zombie Head", "zombie_head"],
+["Zombie Wall Head[ids note 1]", "zombie_wall_head"],
+["Player Head", "player_head"],
+["Player Wall Head[ids note 1]", "player_wall_head"],
+["Creeper Head", "creeper_head"],
+["Creeper Wall Head[ids note 1]", "creeper_wall_head"],
+["Dragon Head", "dragon_head"],
+["Dragon Wall Head[ids note 1]", "dragon_wall_head"],
+["Firework Rocket", "firework_rocket"],
+["Firework Star", "firework_star"],
+["Nether Brick", "nether_brick"],
+["White Banner", "white_banner"],
+["Orange Banner", "orange_banner"],
+["Magenta Banner", "magenta_banner"],
+["Light Blue Banner", "light_blue_banner"],
+["Yellow Banner", "yellow_banner"],
+["Lime Banner", "lime_banner"],
+["Pink Banner", "pink_banner"],
+["Gray Banner", "gray_banner"],
+["Light Gray Banner", "light_gray_banner"],
+["Cyan Banner", "cyan_banner"],
+["Purple Banner", "purple_banner"],
+["Blue Banner", "blue_banner"],
+["Brown Banner", "brown_banner"],
+["Green Banner", "green_banner"],
+["Red Banner", "red_banner"],
+["Black Banner", "black_banner"],
+["White Wall Banner[ids note 1]", "white_wall_banner"],
+["Orange Wall Banner[ids note 1]", "orange_wall_banner"],
+["Magenta Wall Banner[ids note 1]", "magenta_wall_banner"],
+["Light Blue Wall Banner[ids note 1]", "light_blue_wall_banner"],
+["Yellow Wall Banner[ids note 1]", "yellow_wall_banner"],
+["Lime Wall Banner[ids note 1]", "lime_wall_banner"],
+["Pink Wall Banner[ids note 1]", "pink_wall_banner"],
+["Gray Wall Banner[ids note 1]", "gray_wall_banner"],
+["Light Gray Wall Banner[ids note 1]", "light_gray_wall_banner"],
+["Cyan Wall Banner[ids note 1]", "cyan_wall_banner"],
+["Purple Wall Banner[ids note 1]", "purple_wall_banner"],
+["Blue Wall Banner[ids note 1]", "blue_wall_banner"],
+["Brown Wall Banner[ids note 1]", "brown_wall_banner"],
+["Green Wall Banner[ids note 1]", "green_wall_banner"],
+["Red Wall Banner[ids note 1]", "red_wall_banner"],
+["Black Wall Banner[ids note 1]", "black_wall_banner"],
+["Popped Chorus Fruit", "popped_chorus_fruit"],
+["Music Disc", "music_disc_13"],
+["Music Disc", "music_disc_cat"],
+["Music Disc", "music_disc_blocks"],
+["Music Disc", "music_disc_chirp"],
+["Music Disc", "music_disc_far"],
+["Music Disc", "music_disc_mall"],
+["Music Disc", "music_disc_mellohi"],
+["Music Disc", "music_disc_stal"],
+["Music Disc", "music_disc_strad"],
+["Music Disc", "music_disc_ward"],
+["Music Disc", "music_disc_11"],
+["Music Disc", "music_disc_wait"]];
+},{}],17:[function(require,module,exports){
+module.exports.items = require("./lists/blocks.js");
+},{"./lists/blocks.js":16}],18:[function(require,module,exports){
 const JSEvents = require("jsevents");
 
 class jsModal {
@@ -1095,7 +1980,7 @@ class jsModal {
 }
 
 module.exports = jsModal;
-},{"jsevents":4}],9:[function(require,module,exports){
+},{"jsevents":12}],19:[function(require,module,exports){
 let project = require("projects");
 const FileTree = require("filetree");
 const JSEvents = require("jsevents");
@@ -1122,7 +2007,6 @@ class ProjectFile{
             that.file.name = name;
             that.save();
         });
-        console.log(this);
     }
 
     onLoad(){
@@ -1232,7 +2116,7 @@ class ProjectFile{
 }
 
 module.exports = ProjectFile;
-},{"./newfile.js":10,"./settings":12,"filetree":2,"jsevents":4,"projects":11}],10:[function(require,module,exports){
+},{"./newfile.js":20,"./settings":22,"filetree":10,"jsevents":12,"projects":21}],20:[function(require,module,exports){
 module.exports = function () {
     return {
         name: "",
@@ -1259,7 +2143,7 @@ module.exports = function () {
         }
     };
 };
-},{}],11:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 (function (global){
 const ProjectFile = require("./file.js");
 const newFileStructure = require("./newfile.js");
@@ -1492,7 +2376,7 @@ function deleteProject(name) {
 
 module.exports.delete = deleteProject;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./file.js":9,"./newfile.js":10}],12:[function(require,module,exports){
+},{"./file.js":19,"./newfile.js":20}],22:[function(require,module,exports){
 const jsEvents = require("jsevents");
 
 const Modal = require("modal");
@@ -1563,4 +2447,4 @@ class ProjectFileSettings {
 }
 
 module.exports = ProjectFileSettings;
-},{"jsevents":4,"modal":8}]},{},[1]);
+},{"jsevents":12,"modal":18}]},{},[1]);

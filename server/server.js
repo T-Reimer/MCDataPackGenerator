@@ -4,10 +4,13 @@ const port = 8080;
 
 const fs = require("fs");
 
-fs.copyFile("./../repos/blockly/blockly_compressed.js", "./public/blockly_compressed.js", console.log);
-fs.copyFile("./../repos/blockly/blocks_compressed.js", "./public/blocks_compressed.js", console.log);
 
 app.use(express.static('./public'));
+
+app.use("/msg", express.static("./../repos/blockly/msg"));
+
+app.use("/blockly_compressed.js", express.static("./../repos/blockly/blockly_compressed.js"));
+app.use("/blocks_compressed.js", express.static("./../repos/blockly/blocks_compressed.js"));
 
 
 app.listen(port, function(){
