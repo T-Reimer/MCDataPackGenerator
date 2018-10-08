@@ -3,7 +3,7 @@
 $( document ).ready(function(){
     require("load");
 });
-},{"load":14}],2:[function(require,module,exports){
+},{"load":19}],2:[function(require,module,exports){
 // load all of the blocks
 console.log("Load Blockly");
 require("./generators/functions.js");
@@ -12,11 +12,31 @@ require("./generators/functions.js");
 // require("./blocks/say.js");
 require("./loadAllBlocks.js");
 
-const blocklyDiv = document.getElementById('content');
+const FunctionsBlockly = require("./functions");
 
+const blocklyDiv = document.getElementById('content');
+module.exports.blocklyDiv = blocklyDiv;
+
+/**
+ * get the blockly div
+ */
+module.exports.getDiv = function(){
+    return document.getElementById("content");
+};
+
+/**
+ * the main workspace varaible
+ */
+let workspace = null;
+module.exports.workspace = workspace;
+window.workspace = workspace;
+
+/**
+ * 
+ */
 module.exports.start = function () {
 
-    var workspace = Blockly.inject(blocklyDiv,
+    workspace = Blockly.inject(blocklyDiv,
         { toolbox: document.getElementById('toolbox') });
 
     function myUpdateFunction(event) {
@@ -27,10 +47,246 @@ module.exports.start = function () {
 
     }
     workspace.addChangeListener(myUpdateFunction);
-
-    window.workspace = workspace;
 };
-},{"./generators/functions.js":8,"./loadAllBlocks.js":9}],3:[function(require,module,exports){
+
+/**
+ * Open a file in blockly
+ * 
+ * @param {String} name 
+ * @param {Object} file 
+ */
+module.exports.open = function (name, file) {
+    if(workspace){
+        workspace.close();
+    }
+    console.log("%cOpen blockly", "color: green;", name);
+    switch (name) {
+        case "functions":
+            workspace = new FunctionsBlockly(file);
+            break;
+        default:
+    }
+    console.log("Workspace", workspace);
+    return workspace;
+};
+},{"./functions":11,"./generators/functions.js":12,"./loadAllBlocks.js":13}],3:[function(require,module,exports){
+const colour = require("blockly/colour");
+const minecraft = require("minecraft");
+const blockStates = minecraft.blockState;
+
+
+const blocks = (function(){
+    let tmp = [];
+    blockStates.list.forEach(function(block){
+        block.item.forEach(function(name){
+            if(!tmp.includes(name)){
+                tmp.push(name);
+            }
+        });
+    });
+
+    let list = [];
+    tmp.forEach(function(id){
+        let name = minecraft.getItemName(id);
+        if(!name){
+            name = id;
+        }
+        list.push([name, id]);
+    });
+    return list.sort(function(a, b){
+        if(a[0] === b[0]){
+            return 0;
+        }
+        if(a[0] > b[0]){
+            return 1;
+        } else{
+            return -1;
+        }
+    });
+})();
+
+let options = {
+    "message0": "Block %1",
+    "args0": [
+        {
+            "type": "field_dropdown",
+            "name": "BLOCK",
+            "options": blocks
+        }
+    ],
+    "output": "String",
+    "colour": colour.blocks,
+    "tooltip": "Add a block state to a block.",
+    "helpUrl": "",
+    "mutator": "block_state_mutator"
+};
+
+Blockly.Blocks['item_data'] = {
+    init: function () {
+        this.jsonInit(options);
+    }
+};
+
+Blockly.Functions["item_data"] = function (block) {
+    let val = block.getFieldValue("BLOCK") || "";
+    // return val;
+    return [val, Blockly.Functions.ORDER_MEMBER];
+};
+
+
+Blockly.defineBlocksWithJsonArray([  // BEGIN JSON EXTRACT
+    // Block for text value
+    {
+      "type": "block_state_create_join_container",
+      "message0": "add blockstates %1 %2",
+      "args0": [{
+        "type": "input_dummy"
+      },
+      {
+        "type": "input_statement",
+        "name": "STACK"
+      }],
+      "colour": colour.blocks,
+      "tooltip": "add, remove or reorder items to reconfigure this blockstate block",
+      "enableContextMenu": false
+    },
+    {
+      "type": "block_state_create_join_item",
+      "message0": "blockstate",
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": colour.blocks,
+      "tooltip": "add a blockstate input",
+      "enableContextMenu": false
+    }
+  ]);
+
+// copied from blockly text.js
+const mutator = {
+    /**
+     * Create XML to represent number of text inputs.
+     * @return {!Element} XML storage element.
+     * @this Blockly.Block
+     */
+    mutationToDom: function () {
+        var container = document.createElement('mutation');
+        container.setAttribute('items', this.itemCount_);
+        return container;
+    },
+    /**
+     * Parse XML to restore the text inputs.
+     * @param {!Element} xmlElement XML storage element.
+     * @this Blockly.Block
+     */
+    domToMutation: function (xmlElement) {
+        this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10);
+        this.updateShape_();
+    },
+    /**
+     * Populate the mutator's dialog with this block's components.
+     * @param {!Blockly.Workspace} workspace Mutator's workspace.
+     * @return {!Blockly.Block} Root block in mutator.
+     * @this Blockly.Block
+     */
+    decompose: function (workspace) {
+        var containerBlock = workspace.newBlock('block_state_create_join_container');
+        containerBlock.initSvg();
+        var connection = containerBlock.getInput('STACK').connection;
+        for (var i = 0; i < this.itemCount_; i++) {
+            var itemBlock = workspace.newBlock('block_state_create_join_item');
+            itemBlock.initSvg();
+            connection.connect(itemBlock.previousConnection);
+            connection = itemBlock.nextConnection;
+        }
+        return containerBlock;
+    },
+    /**
+     * Reconfigure this block based on the mutator dialog's components.
+     * @param {!Blockly.Block} containerBlock Root block in mutator.
+     * @this Blockly.Block
+     */
+    compose: function (containerBlock) {
+        var itemBlock = containerBlock.getInputTargetBlock('STACK');
+        // Count number of inputs.
+        var connections = [];
+        while (itemBlock) {
+            connections.push(itemBlock.valueConnection_);
+            itemBlock = itemBlock.nextConnection &&
+                itemBlock.nextConnection.targetBlock();
+        }
+        // Disconnect any children that don't belong.
+        for (var i = 0; i < this.itemCount_; i++) {
+            var connection = this.getInput('ADD' + i).connection.targetConnection;
+            if (connection && connections.indexOf(connection) == -1) {
+                connection.disconnect();
+            }
+        }
+        this.itemCount_ = connections.length;
+        this.updateShape_();
+        // Reconnect any child blocks.
+        for (var i = 0; i < this.itemCount_; i++) {
+            Blockly.Mutator.reconnect(connections[i], this, 'ADD' + i);
+        }
+    },
+    /**
+     * Store pointers to any connected child blocks.
+     * @param {!Blockly.Block} containerBlock Root block in mutator.
+     * @this Blockly.Block
+     */
+    saveConnections: function (containerBlock) {
+        var itemBlock = containerBlock.getInputTargetBlock('STACK');
+        var i = 0;
+        while (itemBlock) {
+            var input = this.getInput('ADD' + i);
+            itemBlock.valueConnection_ = input && input.connection.targetConnection;
+            i++;
+            itemBlock = itemBlock.nextConnection &&
+                itemBlock.nextConnection.targetBlock();
+        }
+    },
+    /**
+     * Modify this block to have the correct number of inputs.
+     * @private
+     * @this Blockly.Block
+     */
+    updateShape_: function () {
+        if (this.itemCount_ && this.getInput('EMPTY')) {
+            this.removeInput('EMPTY');
+        } else if (!this.itemCount_ && !this.getInput('EMPTY')) {
+            this.appendDummyInput('EMPTY')
+                .appendField(this.newQuote_(true))
+                .appendField(this.newQuote_(false));
+        }
+        // Add new inputs.
+        for (var i = 0; i < this.itemCount_; i++) {
+            if (!this.getInput('ADD' + i)) {
+                var input = this.appendValueInput('ADD' + i);
+                if (i == 0) {
+                    input.appendField(Blockly.Msg['TEXT_JOIN_TITLE_CREATEWITH']);
+                }
+            }
+        }
+        // Remove deleted inputs.
+        while (this.getInput('ADD' + i)) {
+            this.removeInput('ADD' + i);
+            i++;
+        }
+    }
+};
+
+const extension = function () {
+    // Add the quote mixin for the itemCount_ = 0 case.
+    this.mixin(Blockly.Constants.Text.QUOTE_IMAGE_MIXIN);
+    // Initialize the mutator values.
+    this.itemCount_ = 2;
+    this.updateShape_();
+    // Configure the mutator UI.
+    this.setMutator(new Blockly.Mutator(['block_state_create_join_item']));
+};
+
+
+Blockly.Extensions.registerMutator('block_state_mutator', mutator, extension);
+},{"blockly/colour":10,"minecraft":23}],4:[function(require,module,exports){
 Blockly.Blocks['coords'] = {
     init: function () {
       this.jsonInit({
@@ -67,7 +323,43 @@ Blockly.Blocks['coords'] = {
     // return val;
     return [val, Blockly.Functions.ORDER_MEMBER];
   };
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
+const colours = require("blockly/colour");
+
+Blockly.Blocks['files'] = {
+    init: function () {
+        this.jsonInit({
+            "message0": 'Function: %1 .mcfunction',
+            "args0": [
+                {
+                    "type": "field_input",
+                    "name": "NAME",
+                    "text": ""
+                }
+            ],
+            "message1": "do %1",
+            "args1": [
+                { "type": "input_statement", "name": "DO" }
+            ],
+            // "previousStatement": null,
+            // "nextStatement": null,
+            "colour": colours.functions,
+            "tooltip": "Set a block at location",
+            "helpUrl": "Creates a new Functions File"
+        });
+    }
+};
+
+Blockly.Functions["files"] = function (block) {
+    // Search the text for a substring.
+    // let code = Blockly.Functions.valueToCode(block, 'DO', Blockly.Functions.ORDER_NONE) || "";
+    let name = block.getFieldValue("NAME");
+    let code = `# Starting file ${name}\n`;
+    code += Blockly.Functions.statementToCode(block, 'DO');
+
+    return code;
+};
+},{"blockly/colour":10}],6:[function(require,module,exports){
 const items = require("minecraft").items;
 for(let i = 0; i < items.length; i++){
 
@@ -89,7 +381,7 @@ let options = {
     "helpUrl": ""
 };
 
-console.log(options);
+// console.log(options);
 
 Blockly.Blocks['items'] = {
     init: function () {
@@ -102,7 +394,7 @@ Blockly.Functions["items"] = function (block) {
     // return val;
     return [val, Blockly.Functions.ORDER_MEMBER];
 };
-},{"minecraft":17}],5:[function(require,module,exports){
+},{"minecraft":23}],7:[function(require,module,exports){
 Blockly.Blocks['say'] = {
     init: function () {
         this.jsonInit({
@@ -130,29 +422,39 @@ Blockly.Functions["say"] = function (block) {
     let command = "/say " + val + "\n";
     return command;
 };
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+const colours = require("blockly/colour");
+
 Blockly.Blocks['setblock'] = {
     init: function () {
         this.jsonInit({
-            "message0": '/setblock %1 block %2 %3',
+            "message0": '/setblock coords %1',
             "args0": [
                 {
                     "type": "input_value",
                     "name": "COORDS",
                     "check": "String"
-                },{
-                    "type": "input_value",
-                    "name": "BLOCK",
-                    "check": "String"
-                }, {
-                    "type": "input_value",
-                    "name": "MODE",
-                    "check": "String"
                 }
             ],
+            "message1": "block %1",
+            "args1": [{
+                "type": "input_value",
+                "name": "BLOCK",
+                "check": "String"
+            }],
+            "message2": "mode %1",
+            "args2": [{
+                "type": "field_dropdown",
+                "name": "MODE",
+                "options": [
+                    ["Replace", "replace"],
+                    ["Keep", "keep"],
+                    ["Destroy", "destroy"]
+                ]
+            }],
             "previousStatement": "Action",
             "nextStatement": "Action",
-            "colour": 160,
+            "colour": colours.blocks,
             "tooltip": "Set a block at location",
             "helpUrl": "https://minecraft.gamepedia.com/Commands/setblock"
         });
@@ -165,12 +467,12 @@ Blockly.Functions["setblock"] = function (block) {
 
     let blockName = Blockly.Functions.valueToCode(block, 'BLOCK', Blockly.Functions.ORDER_NONE) || "minecraft:stone";
 
-    let mode = Blockly.Functions.valueToCode(block, 'MODE', Blockly.Functions.ORDER_NONE) || "";
+    let mode = block.getFieldValue("MODE") || "";
 
     let command = "/setblock " + coords + " " + blockName + " " + mode + "\n";
     return command;
 };
-},{}],7:[function(require,module,exports){
+},{"blockly/colour":10}],9:[function(require,module,exports){
 Blockly.Blocks['string'] = {
   init: function () {
     this.jsonInit({
@@ -195,7 +497,39 @@ Blockly.Functions["string"] = function (block) {
   // return val;
   return [val, Blockly.Functions.ORDER_MEMBER];
 };
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
+module.exports = {
+    text: 160,
+    blocks: 320,
+    functions: 50
+};
+},{}],11:[function(require,module,exports){
+const Workspace = require("./workspace");
+
+class FunctionsBlockly{
+
+    constructor(file){
+        this.Workspace = new Workspace(file);
+
+        let xml = file.file.data.functions.blockly_xml;
+        this.Workspace.open(xml);
+        
+        this.Workspace.on("change", function(workspace, Blockly, xml){
+            let code = Blockly.Functions.workspaceToCode(workspace);
+
+            file.setBlocklyData("functions", xml, code);
+            console.log(code, file);
+        });
+        console.log(this);
+    }
+
+    close(){
+        this.Workspace.close();
+    }
+}
+
+module.exports = FunctionsBlockly;
+},{"./workspace":14}],12:[function(require,module,exports){
 'use strict';
 
 
@@ -289,7 +623,7 @@ Blockly.Functions.ORDER_OVERRIDES = [
  * Initialise the database of variable names.
  * @param {!Blockly.Workspace} workspace Workspace to generate code from.
  */
-Blockly.Functions.init = function(workspace) {
+Blockly.Functions.init = function (workspace) {
   // Create a dictionary of definitions to be printed before the code.
   Blockly.Functions.definitions_ = Object.create(null);
   // Create a dictionary mapping desired function names in definitions_
@@ -298,7 +632,7 @@ Blockly.Functions.init = function(workspace) {
 
   if (!Blockly.Functions.variableDB_) {
     Blockly.Functions.variableDB_ =
-        new Blockly.Names(Blockly.Functions.RESERVED_WORDS_);
+      new Blockly.Names(Blockly.Functions.RESERVED_WORDS_);
   } else {
     Blockly.Functions.variableDB_.reset();
   }
@@ -310,20 +644,21 @@ Blockly.Functions.init = function(workspace) {
   var devVarList = Blockly.Variables.allDeveloperVariables(workspace);
   for (var i = 0; i < devVarList.length; i++) {
     defvars.push(Blockly.Functions.variableDB_.getName(devVarList[i],
-        Blockly.Names.DEVELOPER_VARIABLE_TYPE));
+      Blockly.Names.DEVELOPER_VARIABLE_TYPE));
   }
 
   // Add user variables, but only ones that are being used.
   var variables = Blockly.Variables.allUsedVarModels(workspace);
   for (var i = 0; i < variables.length; i++) {
     defvars.push(Blockly.Functions.variableDB_.getName(variables[i].getId(),
-        Blockly.Variables.NAME_TYPE));
+      Blockly.Variables.NAME_TYPE));
   }
 
   // Declare all of the variables.
   if (defvars.length) {
     Blockly.Functions.definitions_['variables'] =
-        'var ' + defvars.join(', ') + ';';
+      'var ' + defvars.join(', ') + '';
+    // 'var ' + defvars.join(', ') + ';';
   }
 };
 
@@ -332,7 +667,7 @@ Blockly.Functions.init = function(workspace) {
  * @param {string} code Generated code.
  * @return {string} Completed code.
  */
-Blockly.Functions.finish = function(code) {
+Blockly.Functions.finish = function (code) {
   // Convert the definitions dictionary into a list.
   var definitions = [];
   for (var name in Blockly.Functions.definitions_) {
@@ -351,8 +686,8 @@ Blockly.Functions.finish = function(code) {
  * @param {string} line Line of generated code.
  * @return {string} Legal line of code.
  */
-Blockly.Functions.scrubNakedValue = function(line) {
-  return line + ';\n';
+Blockly.Functions.scrubNakedValue = function (line) {
+  return line + '\n';
 };
 
 /**
@@ -362,12 +697,12 @@ Blockly.Functions.scrubNakedValue = function(line) {
  * @return {string} Functions string.
  * @private
  */
-Blockly.Functions.quote_ = function(string) {
+Blockly.Functions.quote_ = function (string) {
   // Can't use goog.string.quote since Google's style guide recommends
   // JS string literals use single quotes.
   string = string.replace(/\\/g, '\\\\')
-                 .replace(/\n/g, '\\\n')
-                 .replace(/'/g, '\\\'');
+    .replace(/\n/g, '\\\n')
+    .replace(/'/g, '\\\'');
   return '\'' + string + '\'';
 };
 
@@ -380,7 +715,7 @@ Blockly.Functions.quote_ = function(string) {
  * @return {string} Functions code with comments and subsequent blocks added.
  * @private
  */
-Blockly.Functions.scrub_ = function(block, code) {
+Blockly.Functions.scrub_ = function (block, code) {
   var commentCode = '';
   // Only collect comments for blocks that aren't inline.
   if (!block.outputConnection || !block.outputConnection.targetConnection) {
@@ -390,11 +725,11 @@ Blockly.Functions.scrub_ = function(block, code) {
     if (comment) {
       if (block.getProcedureDef) {
         // Use a comment block for function comments.
-        commentCode += '/**\n' +
-                       Blockly.Functions.prefixLines(comment + '\n', ' * ') +
-                       ' */\n';
+        commentCode += '' +
+          Blockly.Functions.prefixLines(comment + '\n', '# ') +
+          '';
       } else {
-        commentCode += Blockly.Functions.prefixLines(comment + '\n', '// ');
+        commentCode += Blockly.Functions.prefixLines(comment + '\n', '# ');
       }
     }
     // Collect comments for all value arguments.
@@ -405,7 +740,7 @@ Blockly.Functions.scrub_ = function(block, code) {
         if (childBlock) {
           var comment = Blockly.Functions.allNestedComments(childBlock);
           if (comment) {
-            commentCode += Blockly.Functions.prefixLines(comment, '// ');
+            commentCode += Blockly.Functions.prefixLines(comment, '# ');
           }
         }
       }
@@ -425,8 +760,8 @@ Blockly.Functions.scrub_ = function(block, code) {
  * @param {number=} opt_order The highest order acting on this value.
  * @return {string|number}
  */
-Blockly.Functions.getAdjusted = function(block, atId, opt_delta, opt_negate,
-    opt_order) {
+Blockly.Functions.getAdjusted = function (block, atId, opt_delta, opt_negate,
+  opt_order) {
   var delta = opt_delta || 0;
   var order = opt_order || Blockly.Functions.ORDER_NONE;
   if (block.workspace.options.oneBasedIndex) {
@@ -435,16 +770,16 @@ Blockly.Functions.getAdjusted = function(block, atId, opt_delta, opt_negate,
   var defaultAtIndex = block.workspace.options.oneBasedIndex ? '1' : '0';
   if (delta > 0) {
     var at = Blockly.Functions.valueToCode(block, atId,
-        Blockly.Functions.ORDER_ADDITION) || defaultAtIndex;
+      Blockly.Functions.ORDER_ADDITION) || defaultAtIndex;
   } else if (delta < 0) {
     var at = Blockly.Functions.valueToCode(block, atId,
-        Blockly.Functions.ORDER_SUBTRACTION) || defaultAtIndex;
+      Blockly.Functions.ORDER_SUBTRACTION) || defaultAtIndex;
   } else if (opt_negate) {
     var at = Blockly.Functions.valueToCode(block, atId,
-        Blockly.Functions.ORDER_UNARY_NEGATION) || defaultAtIndex;
+      Blockly.Functions.ORDER_UNARY_NEGATION) || defaultAtIndex;
   } else {
     var at = Blockly.Functions.valueToCode(block, atId, order) ||
-        defaultAtIndex;
+      defaultAtIndex;
   }
 
   if (Blockly.isNumber(at)) {
@@ -479,13 +814,78 @@ Blockly.Functions.getAdjusted = function(block, atId, opt_delta, opt_negate,
   return at;
 };
 
-},{}],9:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 require("./blocks/say");
 require("./blocks/setBlock");
 require("./blocks/string");
 require("./blocks/items");
+require("blockly/blocks/blockState");
 require("./blocks/coords");
-},{"./blocks/coords":3,"./blocks/items":4,"./blocks/say":5,"./blocks/setBlock":6,"./blocks/string":7}],10:[function(require,module,exports){
+require("./blocks/file/files");
+},{"./blocks/coords":4,"./blocks/file/files":5,"./blocks/items":6,"./blocks/say":7,"./blocks/setBlock":8,"./blocks/string":9,"blockly/blocks/blockState":3}],14:[function(require,module,exports){
+const JSEvents = require("jsevents");
+const blockly = require("blockly");
+
+
+/**
+ * Create a workspace
+ */
+class Workspace {
+
+    /**
+     * Create a workspace
+     * 
+     * @param {ProjectFile} file 
+     */
+    constructor(file) {
+        this.file = file;
+        this.events = new JSEvents(this);
+
+    }
+
+    open(xml_text) {
+        const that = this;
+
+        const options = {
+            toolbox: document.getElementById('toolbox'),
+            zoom: {
+                controls: true,
+                wheel: true,
+                startScale: 1.0,
+                maxScale: 3,
+                minScale: 0.3,
+                scaleSpeed: 1.1
+            },
+            trashcan: true
+        };
+        let workspace = Blockly.inject(blockly.getDiv(), options);
+
+        if (xml_text) {
+            const xml = Blockly.Xml.textToDom(xml_text);
+            Blockly.Xml.domToWorkspace(xml, workspace);
+        }
+        this.workspace = workspace;
+
+        // run when a change was made in blockly
+        workspace.addChangeListener(function () {
+            var xml = Blockly.Xml.workspaceToDom(workspace);
+            var xml_text = Blockly.Xml.domToText(xml);
+
+            that.onChange(that.workspace, Blockly, xml_text);
+        });
+    }
+
+    onChange() {
+        this.events.triggerCallback("change", this, arguments);
+    }
+
+    close(){
+        blockly.getDiv().innerHTML = "";
+    }
+}
+
+module.exports = Workspace;
+},{"blockly":2,"jsevents":17}],15:[function(require,module,exports){
 let idNum = 0;
 const html = require("html");
 const JSEvents = require("jsevents");
@@ -494,7 +894,7 @@ class FileTree{
     
     /**
      * 
-     * @param {Element} parent html element to put the file tree under
+     * @param {Element} ul html element to put the file tree under
      * @param {Object} structure the file structure to use
      */
     constructor(ul, structure, options){
@@ -808,7 +1208,12 @@ class FileTree{
         let parentId = this.name + "-menu-" + html.newId();
         // <li class="active border-top border-bottom">
         let li = ul.createChild("li", {
-            classList: ["active", "border-top", "border-bottom"]
+            classList: ["active", "border-top", "border-bottom"],
+            on: {
+                click: function(){
+                    that.triggerEvent("selected", []);
+                }
+            }
         });
 
         // <a href="#advancements-menu" data-toggle="collapse" aria-expanded="false" class="btn">
@@ -1115,7 +1520,7 @@ class FileTree{
 }
 
 module.exports = FileTree;
-},{"html":11,"jsevents":12}],11:[function(require,module,exports){
+},{"html":16,"jsevents":17}],16:[function(require,module,exports){
 let ids = [];
 const str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -1154,7 +1559,7 @@ function newId(len){
 }
 
 module.exports.newId = newId;
-},{}],12:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 
 
 class JSEvents{
@@ -1223,7 +1628,7 @@ class JSEvents{
 }
 
 module.exports = JSEvents;
-},{}],13:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 
 Element.prototype.createChild = function(type, options){
     let el = document.createChild(type, options);
@@ -1283,7 +1688,7 @@ document.createChild = function(type, options){
 
     return el;
 };
-},{}],14:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 (function (global){
 // run onload of the doc
 const project = require("projects");
@@ -1339,12 +1744,8 @@ $("#new-project-form").on("submit", function (event) {
             $("#new-project-form-warning-div").show();
         });
 });
-
-const workspace = require("blockly");
-
-workspace.start();
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./createChild":13,"./sidebar":15,"blockly":2,"projects":21}],15:[function(require,module,exports){
+},{"./createChild":18,"./sidebar":20,"projects":27}],20:[function(require,module,exports){
 var min = 195;
 var max = 400;
 var mainmin = 150;
@@ -1363,8 +1764,151 @@ $('#split-bar').mousedown(function (e) {
 $(document).mouseup(function (e) {
     $(document).unbind('mousemove');
 });
-},{}],16:[function(require,module,exports){
-module.exports = [["Stone", "stone"],
+},{}],21:[function(require,module,exports){
+const list = [
+    {
+        item: [ "anvil", "chipped_anvil", "damaged_anvil" ],
+        states: [{
+            name: "facing",
+            value: [
+                ["south", "south"],
+                ["west", "west"],
+                ["north", "north"],
+                ["east", "east"]
+            ],
+            description: "This value is 90° clockwise from the direction a player faces while placing an anvil."
+        }]
+    }, {
+        item: ["white_banner",
+            "orange_banner",
+            "magenta_banner",
+            "light_blue_banner",
+            "yellow_banner",
+            "lime_banner",
+            "pink_banner",
+            "gray_banner",
+            "light_gray_banner",
+            "cyan_banner",
+            "purple_banner",
+            "blue_banner",
+            "brown_banner",
+            "green_banner",
+            "red_banner",
+            "black_banner",
+            "white_wall_banner",
+            "orange_wall_banner",
+            "magenta_wall_banner",
+            "light_blue_wall_banner",
+            "yellow_wall_banner",
+            "lime_wall_banner",
+            "pink_wall_banner",
+            "gray_wall_banner",
+            "light_gray_wall_banner",
+            "cyan_wall_banner",
+            "purple_wall_banner",
+            "blue_wall_banner",
+            "brown_wall_banner",
+            "green_wall_banner",
+            "red_wall_banner",
+            "black_wall_banner"],
+        states: [
+            {
+                name: "rotation",
+                value: [["south", 0],
+                ["south-southwest", 1],
+                ["southwest", 2],
+                ["west-southwest", 3],
+                ["west", 4],
+                ["west-northwest", 5],
+                ["northwest", 6],
+                ["north-northwest", 7],
+                ["north", 8],
+                ["north-northeast", 9],
+                ["northeast", 10],
+                ["east-northeast", 11],
+                ["east", 12],
+                ["east-southeast", 13],
+                ["southeast", 14],
+                ["south-southeast", 15]],
+                description: "The direction a floor banner is facing"
+            }, {
+                name: "facing",
+                value: [
+                    ["south", "south"],
+                    ["west", "west"],
+                    ["north", "north"],
+                    ["east", "east"]
+                ],
+                description: "The direction the wall banner is facing."
+            }
+        ]
+    },{
+        item: [ "white_bed",
+        "orange_bed",
+        "magenta_bed",
+        "light_blue_bed",
+        "yellow_bed",
+        "lime_bed",
+        "pink_bed",
+        "gray_bed",
+        "light_gray_bed",
+        "cyan_bed",
+        "purple_bed",
+        "blue_bed",
+        "brown_bed",
+        "green_bed",
+        "red_bed",
+        "black_bed" ],
+        states: [{
+            name: "facing",
+            value: [
+                ["south", "south"],
+                ["west", "west"],
+                ["north", "north"],
+                ["east", "east"]
+            ],
+            description: "The direction the head of the bed is pointing."
+        }, {
+            name: "occupied",
+            value: [
+                ["True", "true"],
+                ["False", "false"]
+            ],
+            description: "True when a player is using the bed."
+        }, {
+            name: "part",
+            value: [
+                ["Head", "head"],
+                ["Foot", "foot"]
+            ],
+            description: "The half of the bed in the current block."
+        }]
+    }
+];
+
+const ItemTemplate = {
+    item: [],
+    states: [{
+        name: "",
+        value: [["a", 1]]
+    }]
+};
+
+for(let i = 0; i < list.length; i++){
+    let item = list[i].item;
+    for(let j = 0; j < item.length; j++){
+        let name = item[j];
+        if(!name.includes("minecraft:")){
+            item[j] = "minecraft:" + name;
+        }
+    }
+}
+
+console.table(list);
+
+module.exports.list = list;
+},{}],22:[function(require,module,exports){
+const list = [["Stone", "stone"],
 ["Granite", "granite"],
 ["Polished Granite", "polished_granite"],
 ["Diorite", "diorite"],
@@ -1419,7 +1963,7 @@ module.exports = [["Stone", "stone"],
 ["Grass", "grass"],
 ["Fern", "fern"],
 ["Dead Bush", "dead_bush"],
-["Moving Piston[ids note 1]", "moving_piston"],
+["Moving Piston", "moving_piston"],
 ["White Wool", "white_wool"],
 ["Orange Wool", "orange_wool"],
 ["Magenta Wool", "magenta_wool"],
@@ -1469,13 +2013,13 @@ module.exports = [["Stone", "stone"],
 ["Bricks", "bricks"],
 ["Spawner", "spawner"],
 ["Nether Portal", "nether_portal"],
-["Wall Torch[ids note 1]", "wall_torch"],
+["Wall Torch", "wall_torch"],
 ["Torch", "torch"],
 ["Furnace", "furnace"],
 ["Cobblestone Stairs", "cobblestone_stairs"],
 ["Oak Pressure Plate", "oak_pressure_plate"],
 ["Redstone Ore", "redstone_ore"],
-["Redstone Wall Torch[ids note 1]", "redstone_wall_torch"],
+["Redstone Wall Torch", "redstone_wall_torch"],
 ["Redstone Torch", "redstone_torch"],
 ["Snow", "snow"],
 ["Snow Block", "snow_block"],
@@ -1635,8 +2179,8 @@ module.exports = [["Stone", "stone"],
 ["Golden Apple", "golden_apple"],
 ["Enchanted Golden Apple", "enchanted_golden_apple"],
 ["Sign", "sign"],
-["Water[ids note 1]", "water"],
-["Lava[ids note 1]", "lava"],
+["Water", "water"],
+["Lava", "lava"],
 ["Oak Boat", "oak_boat"],
 ["Sugar cane", "sugar_cane"],
 ["Raw Cod", "cod"],
@@ -1678,10 +2222,10 @@ module.exports = [["Stone", "stone"],
 ["Red Bed", "red_bed"],
 ["Black Bed", "black_bed"],
 ["Melon Slice", "melon_slice"],
-["Pumpkin Stem[ids note 1]", "pumpkin_stem"],
-["Attached Pumpkin Stem[ids note 1]", "attached_pumpkin_stem"],
-["Melon Stem[ids note 1]", "melon_stem"],
-["Attached Melon Stem[ids note 1]", "attached_melon_stem"],
+["Pumpkin Stem", "pumpkin_stem"],
+["Attached Pumpkin Stem", "attached_pumpkin_stem"],
+["Melon Stem", "melon_stem"],
+["Attached Melon Stem", "attached_melon_stem"],
 ["Glistering Melon Slice", "glistering_melon_slice"],
 ["Bat Spawn Egg", "bat_spawn_egg"],
 ["Blaze Spawn Egg", "blaze_spawn_egg"],
@@ -1727,39 +2271,39 @@ module.exports = [["Stone", "stone"],
 ["Zombie Pigman Spawn Egg", "zombie_pigman_spawn_egg"],
 ["Zombie Villager Spawn Egg", "zombie_villager_spawn_egg"],
 ["Flower Pot", "flower_pot"],
-["Potted Poppy[ids note 1]", "potted_poppy"],
-["Potted Dandelion[ids note 1]", "potted_dandelion"],
-["Potted Oak Sapling[ids note 1]", "potted_oak_sapling"],
-["Potted Spruce Sapling[ids note 1]", "potted_spruce_sapling"],
-["Potted Birch Sapling[ids note 1]", "potted_birch_sapling"],
-["Potted Jungle Sapling[ids note 1]", "potted_jungle_sapling"],
-["Potted Red Mushroom[ids note 1]", "potted_red_mushroom"],
-["Potted Brown Mushroom[ids note 1]", "potted_brown_mushroom"],
-["Potted Cactus[ids note 1]", "potted_cactus"],
-["Potted Dead Bush[ids note 1]", "potted_dead_bush"],
-["Potted Fern[ids note 1]", "potted_fern"],
-["Potted Acacia Sapling[ids note 1]", "potted_acacia_sapling"],
-["Potted Dark Oak Sapling[ids note 1]", "potted_dark_oak_sapling"],
-["Potted Blue Orchid[ids note 1]", "potted_blue_orchid"],
-["Potted Allium[ids note 1]", "potted_allium"],
-["Potted Azure Bluet[ids note 1]", "potted_azure_bluet"],
-["Potted Red Tulip[ids note 1]", "potted_red_tulip"],
-["Potted Orange Tulip[ids note 1]", "potted_orange_tulip"],
-["Potted White Tulip[ids note 1]", "potted_white_tulip"],
-["Potted Pink Tulip[ids note 1]", "potted_pink_tulip"],
-["Potted Oxeye Daisy[ids note 1]", "potted_oxeye_daisy"],
+["Potted Poppy", "potted_poppy"],
+["Potted Dandelion", "potted_dandelion"],
+["Potted Oak Sapling", "potted_oak_sapling"],
+["Potted Spruce Sapling", "potted_spruce_sapling"],
+["Potted Birch Sapling", "potted_birch_sapling"],
+["Potted Jungle Sapling", "potted_jungle_sapling"],
+["Potted Red Mushroom", "potted_red_mushroom"],
+["Potted Brown Mushroom", "potted_brown_mushroom"],
+["Potted Cactus", "potted_cactus"],
+["Potted Dead Bush", "potted_dead_bush"],
+["Potted Fern", "potted_fern"],
+["Potted Acacia Sapling", "potted_acacia_sapling"],
+["Potted Dark Oak Sapling", "potted_dark_oak_sapling"],
+["Potted Blue Orchid", "potted_blue_orchid"],
+["Potted Allium", "potted_allium"],
+["Potted Azure Bluet", "potted_azure_bluet"],
+["Potted Red Tulip", "potted_red_tulip"],
+["Potted Orange Tulip", "potted_orange_tulip"],
+["Potted White Tulip", "potted_white_tulip"],
+["Potted Pink Tulip", "potted_pink_tulip"],
+["Potted Oxeye Daisy", "potted_oxeye_daisy"],
 ["Skeleton Skull", "skeleton_skull"],
-["Skeleton Wall Skull[ids note 1]", "skeleton_wall_skull"],
+["Skeleton Wall Skull", "skeleton_wall_skull"],
 ["Wither Skeleton Skull", "wither_skeleton_skull"],
-["Wither Skeleton Wall Skull[ids note 1]", "wither_skeleton_wall_skull"],
+["Wither Skeleton Wall Skull", "wither_skeleton_wall_skull"],
 ["Zombie Head", "zombie_head"],
-["Zombie Wall Head[ids note 1]", "zombie_wall_head"],
+["Zombie Wall Head", "zombie_wall_head"],
 ["Player Head", "player_head"],
-["Player Wall Head[ids note 1]", "player_wall_head"],
+["Player Wall Head", "player_wall_head"],
 ["Creeper Head", "creeper_head"],
-["Creeper Wall Head[ids note 1]", "creeper_wall_head"],
+["Creeper Wall Head", "creeper_wall_head"],
 ["Dragon Head", "dragon_head"],
-["Dragon Wall Head[ids note 1]", "dragon_wall_head"],
+["Dragon Wall Head", "dragon_wall_head"],
 ["Firework Rocket", "firework_rocket"],
 ["Firework Star", "firework_star"],
 ["Nether Brick", "nether_brick"],
@@ -1779,38 +2323,68 @@ module.exports = [["Stone", "stone"],
 ["Green Banner", "green_banner"],
 ["Red Banner", "red_banner"],
 ["Black Banner", "black_banner"],
-["White Wall Banner[ids note 1]", "white_wall_banner"],
-["Orange Wall Banner[ids note 1]", "orange_wall_banner"],
-["Magenta Wall Banner[ids note 1]", "magenta_wall_banner"],
-["Light Blue Wall Banner[ids note 1]", "light_blue_wall_banner"],
-["Yellow Wall Banner[ids note 1]", "yellow_wall_banner"],
-["Lime Wall Banner[ids note 1]", "lime_wall_banner"],
-["Pink Wall Banner[ids note 1]", "pink_wall_banner"],
-["Gray Wall Banner[ids note 1]", "gray_wall_banner"],
-["Light Gray Wall Banner[ids note 1]", "light_gray_wall_banner"],
-["Cyan Wall Banner[ids note 1]", "cyan_wall_banner"],
-["Purple Wall Banner[ids note 1]", "purple_wall_banner"],
-["Blue Wall Banner[ids note 1]", "blue_wall_banner"],
-["Brown Wall Banner[ids note 1]", "brown_wall_banner"],
-["Green Wall Banner[ids note 1]", "green_wall_banner"],
-["Red Wall Banner[ids note 1]", "red_wall_banner"],
-["Black Wall Banner[ids note 1]", "black_wall_banner"],
+["White Wall Banner", "white_wall_banner"],
+["Orange Wall Banner", "orange_wall_banner"],
+["Magenta Wall Banner", "magenta_wall_banner"],
+["Light Blue Wall Banner", "light_blue_wall_banner"],
+["Yellow Wall Banner", "yellow_wall_banner"],
+["Lime Wall Banner", "lime_wall_banner"],
+["Pink Wall Banner", "pink_wall_banner"],
+["Gray Wall Banner", "gray_wall_banner"],
+["Light Gray Wall Banner", "light_gray_wall_banner"],
+["Cyan Wall Banner", "cyan_wall_banner"],
+["Purple Wall Banner", "purple_wall_banner"],
+["Blue Wall Banner", "blue_wall_banner"],
+["Brown Wall Banner", "brown_wall_banner"],
+["Green Wall Banner", "green_wall_banner"],
+["Red Wall Banner", "red_wall_banner"],
+["Black Wall Banner", "black_wall_banner"],
 ["Popped Chorus Fruit", "popped_chorus_fruit"],
-["Music Disc", "music_disc_13"],
-["Music Disc", "music_disc_cat"],
-["Music Disc", "music_disc_blocks"],
-["Music Disc", "music_disc_chirp"],
-["Music Disc", "music_disc_far"],
-["Music Disc", "music_disc_mall"],
-["Music Disc", "music_disc_mellohi"],
-["Music Disc", "music_disc_stal"],
-["Music Disc", "music_disc_strad"],
-["Music Disc", "music_disc_ward"],
-["Music Disc", "music_disc_11"],
-["Music Disc", "music_disc_wait"]];
-},{}],17:[function(require,module,exports){
-module.exports.items = require("./lists/blocks.js");
-},{"./lists/blocks.js":16}],18:[function(require,module,exports){
+["Music Disc 13", "music_disc_13"],
+["Music Disc Cat", "music_disc_cat"],
+["Music Disc Blocks", "music_disc_blocks"],
+["Music Disc Chirp", "music_disc_chirp"],
+["Music Disc Far", "music_disc_far"],
+["Music Disc Mall", "music_disc_mall"],
+["Music Disc Mellohi", "music_disc_mellohi"],
+["Music Disc Stal", "music_disc_stal"],
+["Music Disc Strad", "music_disc_strad"],
+["Music Disc Ward", "music_disc_ward"],
+["Music Disc 11", "music_disc_11"],
+["Music Disc Wait", "music_disc_wait"]];
+
+module.exports = list.sort(function(a, b){
+    if (a[1] === b[1]) {
+        return 0;
+    }
+    else {
+        return (a[1] < b[1]) ? -1 : 1;
+    }
+});
+},{}],23:[function(require,module,exports){
+const blockList = require("./lists/blocks.js");
+// console.table(blockList);
+module.exports.items = blockList;
+module.exports.blockState = require("./lists/blockState");
+
+/**
+ * Get a minecraft block name from id
+ * 
+ * @param {String} id the block id
+ */
+module.exports.getItemName = function(id){
+    if(!id.includes("minecraft:")){
+        id = "minecraft:" + id;
+    }
+    for(let i = 0; i < blockList.length; i++){
+        const arr = blockList[i];
+        if(arr[1] == id){
+            return arr[0];
+        }
+    }
+    return null;
+};
+},{"./lists/blockState":21,"./lists/blocks.js":22}],24:[function(require,module,exports){
 const JSEvents = require("jsevents");
 
 class jsModal {
@@ -1980,7 +2554,7 @@ class jsModal {
 }
 
 module.exports = jsModal;
-},{"jsevents":12}],19:[function(require,module,exports){
+},{"jsevents":17}],25:[function(require,module,exports){
 let project = require("projects");
 const FileTree = require("filetree");
 const JSEvents = require("jsevents");
@@ -1988,19 +2562,21 @@ const newFileStructure = require("./newfile.js");
 
 const projectSettings = require("./settings");
 
+const Blockly = require("blockly");
 
-class ProjectFile{
-    constructor(name){
+
+class ProjectFile {
+    constructor(name) {
         this.name = name;
         this.setup();
         const that = this;
 
         // load the project
-        project.load(name).then(function(data){
+        project.load(name).then(function (data) {
             console.log("loading Data");
             that.setFile(data);
 
-        }).catch(function(err){
+        }).catch(function (err) {
             console.warn(err);
             // then this is a new project
             console.log("New Project");
@@ -2009,14 +2585,14 @@ class ProjectFile{
         });
     }
 
-    onLoad(){
+    onLoad() {
         let projectEl = document.getElementById("project-list-current");
         projectEl.innerText = this.file.name;
 
         this.events.triggerCallback("load", this, []);
     }
 
-    setFile(file){
+    setFile(file) {
         this.file = file;
 
         this.fileTrees = {};
@@ -2024,14 +2600,14 @@ class ProjectFile{
         let element = document.getElementById("files-list-menu");
         element.innerHTML = "";
 
-        for(let d in this.file.data){
+        for (let d in this.file.data) {
             let options = {
                 name: d
             };
 
             let tree = new FileTree(
-                element, 
-                this.file.data[d].files, 
+                element,
+                this.file.data[d].files,
                 options
             );
             this.treeSetup(tree, d);
@@ -2041,15 +2617,15 @@ class ProjectFile{
         this.onLoad();
     }
 
-    setup(){
+    setup() {
         this.file = newFileStructure();
 
         this.events = new JSEvents(this);
     }
 
-    setData(data){
-        for(let d in data){
-            if(d === "data"){
+    setData(data) {
+        for (let d in data) {
+            if (d === "data") {
                 continue;
             }
             this.file[d] = data[d];
@@ -2063,8 +2639,13 @@ class ProjectFile{
      * 
      * @param {FileTree} tree the file tree class
      */
-    treeSetup(tree, name){
-        tree.on("file-opened", function(file){
+    treeSetup(tree, name) {
+        const that = this;
+        // used for the functions because blockly is a complete file 
+        tree.on("selected", function () {
+            that.workspace = Blockly.open(name, that);
+        });
+        tree.on("file-opened", function (file) {
             console.log("Opening File", file);
             // open the blocky file editor class
         });
@@ -2073,50 +2654,64 @@ class ProjectFile{
     /**
      * save the data
      */
-    save(){
+    save() {
         console.log("Save File", this.file);
         project.save(this.file);
     }
 
-    get data(){
+    get data() {
         return this.file;
     }
 
     /**
      * 
      */
-    updateDOM(){
+    updateDOM() {
 
     }
 
-    settings(){
+    settings() {
         const that = this;
 
         let settings = new projectSettings(this);
 
-        settings.on("save", function(){
+        settings.on("save", function () {
 
         });
 
-        settings.on("delete", function(){
+        settings.on("delete", function () {
             console.log("Delete Project");
             project.delete(that.name)
-                .then(function(){
+                .then(function () {
                     // deleted load the demo and scrap the settings menu
                     settings.close();
                     project.loadDemo();
                 })
-                .catch(function(err){
+                .catch(function (err) {
                     // not deleted for some reason
                     // TODO: send to message to a toast
                     console.log("Delete Request Canceled", err.message);
                 });
         });
     }
+
+    /**
+     * insert the blockly xml and code to save
+     */
+    setBlocklyData(type, xml, code) {
+        switch (type) {
+            case "functions":
+                this.file.data.functions.blockly_xml = xml;
+                this.file.data.functions.code = code;
+                this.save();
+                // console.log(type, xml, code);
+                break;
+        }
+    }
 }
 
 module.exports = ProjectFile;
-},{"./newfile.js":20,"./settings":22,"filetree":10,"jsevents":12,"projects":21}],20:[function(require,module,exports){
+},{"./newfile.js":26,"./settings":28,"blockly":2,"filetree":15,"jsevents":17,"projects":27}],26:[function(require,module,exports){
 module.exports = function () {
     return {
         name: "",
@@ -2126,6 +2721,8 @@ module.exports = function () {
                 files: []
             },
             functions: {
+                code: "",
+                blockly_xml: "",
                 files: []
             },
             loot_tables: {
@@ -2143,7 +2740,7 @@ module.exports = function () {
         }
     };
 };
-},{}],21:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 (function (global){
 const ProjectFile = require("./file.js");
 const newFileStructure = require("./newfile.js");
@@ -2376,7 +2973,7 @@ function deleteProject(name) {
 
 module.exports.delete = deleteProject;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./file.js":19,"./newfile.js":20}],22:[function(require,module,exports){
+},{"./file.js":25,"./newfile.js":26}],28:[function(require,module,exports){
 const jsEvents = require("jsevents");
 
 const Modal = require("modal");
@@ -2447,4 +3044,4 @@ class ProjectFileSettings {
 }
 
 module.exports = ProjectFileSettings;
-},{"jsevents":12,"modal":18}]},{},[1]);
+},{"jsevents":17,"modal":24}]},{},[1]);
